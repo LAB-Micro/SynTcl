@@ -4,7 +4,6 @@ set criticalPaths ""
 set slackWin ""
 set clockPeriod [get_attribute [get_clock] period]
 set slackWC [get_attribute [get_timing_paths  -to [all_outputs]] slack]
-
 set void ""
 	[regexp {\-arrivalTime[^\d](\d+\.*\d*) *} $args void arrivalTime] 
 	[regexp {\-criticalPaths[^\d](\d+) *} $args void criticalPaths] 
@@ -20,19 +19,26 @@ set void ""
 
 	
 	set total_power 0
-	foreach_in_collection cell [get_cells] {
-		set total_power [expr $total_power + [get_attribute $cell cell_leakage_power]]
-	}
+	foreach_in_collection path [get_timing_paths -to N8123 -path_type full]  {
+	puts "[ get_attribute $path full_name ]"
+	foreach_in_collection cell $path {
+		set full_name [get_attribute $cell full_name]
+    		set ref_name [get_attribute $cell ref_name]
+		set leakage_power [get_attribute $full_name cell_leakage_power]
+		puts "$cell, $full_name, $leakage_power"
+		#puts "cell:	$full_name, $ref_name"
+		set total_power [expr $total_power + $leakage_power]
+	}}
 	
 #set previousLeakage [get_attribute U440 cell_leakage_power]
 
 #puts $wc_slack
 puts $clockPeriod
-puts $args
-puts "arrivalTime = $arrivalTime"
-puts "criticalPaths = $criticalPaths"
-puts "slackWin = $slackWin"
-puts $total_power
+#puts $args
+#puts "arrivalTime = $arrivalTime"
+#puts "criticalPaths = $criticalPaths"
+#puts "slackWin = $slackWin"
+puts "total power = $total_power"
 
 }
 
