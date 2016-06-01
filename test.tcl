@@ -8,9 +8,10 @@
     		
 		puts "endpoint:	$tmp_ep"
     		puts "arrival:	$tmp_ar"
-    		puts "slack:	$tmp_sle"
+    		puts "slack:	$tmp_sl"
     		puts ""
 		report_attribute $path
+		#get_attributes
 
   }
 }
