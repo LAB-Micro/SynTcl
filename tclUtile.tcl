@@ -18,7 +18,7 @@ foreach_in_collection point_cell [get_cells] {
 list_attributes -class cell -application
 
 # return num of path
-set path_list [get_timingpaths -from A -to B]
+set path_list [get_timing_paths -from A -to B]
 set num_path [sizeof_collection $path_list]
 
 #return arrival time

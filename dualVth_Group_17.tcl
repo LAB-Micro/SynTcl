@@ -4,10 +4,10 @@ set criticalPaths ""
 set slackWin ""
 set clockPeriod [get_attribute [get_clock] period]
 set slackWC [get_attribute [get_timing_paths  -to [all_outputs]] slack]
-
+set epsilon 0.50
 set void ""
 
-	set target_library [lappend target_library [lindex $link_library 4]]
+	#set target_library [lappend target_library [lindex $link_library 4]]
 
 	set timestart [clock seconds]
 	
@@ -35,12 +35,38 @@ set void ""
 		}	
 	}
 
+	set celle_che_posso_cambiare [list]
+	set wrt_path_collection [get_timing_paths]
+	foreach_in_collection timing_point [get_attribute $wrt_path_collection points] {
+		set cell_name [get_attribute [get_attribute $timing_point object] full_name]
+		puts "$cell_name [get_attribute $timing_point arrival]"
+		lappend celle_che_posso_cambiare $cell_name 
+	}
+	
+	#set celle_che_non_posso_cambiare [list]
+	#set wrt_path_collection [get_timing_paths -slack_lesser_than $epsilon -nworst 5000]
+	#foreach_in_collection timing_point [get_attribute $wrt_path_collection points] {
+		#set cell_name [get_attribute [get_attribute $timing_point object] full_name]
+		#lappend celle_che_non_posso_cambiare $cell_name 
+	#}
+	
+	#puts "celle_che_posso_cambiare: [sizeof_collection $celle_che_posso_cambiare]"
+	#puts "celle_che_non_posso_cambiare: [sizeof_collection $celle_che_non_posso_cambiare]"
+	
+	#foreach_in_collection cell $celle_che_posso_cambiare {
+		#set idx [lsearch $celle_che_posso_cambiare $cell]
+		#puts $idx
+		#set mylist [lreplace $celle_che_posso_cambiare $idx $idx]
+		 #puts $cell
+
+	#}
+	
 	
 	set total_power 0
-	foreach_in_collection cell [get_cells] {
+	#foreach_in_collection cell [get_cells] {
 		#puts "[get_attribute $cell full_name] [get_attribute $cell cell_leakage_power]"
-		set total_power [expr $total_power + [get_attribute $cell cell_leakage_power]]
-	}
+	#	set total_power [expr $total_power + [get_attribute $cell cell_leakage_power]]
+	#}
 	
 #set previousLeakage [get_attribute U440 cell_leakage_power]
 
