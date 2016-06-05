@@ -25,12 +25,12 @@ set void ""
 
 
 	if {$slackWC < $slackWin} {
-		set count 0
-		foreach_in_collection path [get_timing_paths -to [all_outputs] -nworst $criticalPaths -slack_lesser_than $slackWin] {
-			set count [expr $count + 1]
-		}
+		#set count 0
+		#foreach_in_collection path [get_timing_paths -to [all_outputs] -nworst $criticalPaths -slack_lesser_than $slackWin] {
+		#	set count [expr $count + 1]
+		#}
 		
-		if {$count == $criticalPaths} {
+		if {[sizeof_collection [get_timing_paths -to [all_outputs] -nworst $criticalPaths -slack_lesser_than $slackWin]] == $criticalPaths} {
 			return [list {0 0 0}] 
 		}	
 	}
@@ -116,25 +116,38 @@ set void ""
 	set num_celle_da_cambiare 0
 	foreach id [array names celle_che_posso_cambiare] {
 		if {![info exists celle_che_non_posso_cambiare($id)]} {
-			set celle_da_cambiare($id) $celle_che_posso_cambiare($id)
-			set num_celle_da_cambiare [expr $num_celle_da_cambiare + 1]
+			#set celle_da_cambiare($id) $celle_che_posso_cambiare($id)
+			#set num_celle_da_cambiare [expr $num_celle_da_cambiare + 1]
 			if {[regexp {ref} $id]} {
 				[regexp {(.*),ref} $id void pin_name]
-				get_lib_cells -of_objects $pin_name
-				set leak_L [get_attribute CORE65LPLVT/$celle_da_cambiare($id) cell_leakage_power]
+				#get_lib_cells -of_objects $pin_name
+				#set leak_L [get_attribute CORE65LPLVT/$celle_da_cambiare($id) cell_leakage_power]
 				
-				set nlist [split $celle_da_cambiare($id) "_"]
+				set nlist [split $celle_che_posso_cambiare($id) "_"]
 				set newname [lindex $nlist 0]
 				append newname "_"
 				append newname "LH"
 				append newname "_"
 				append newname [lindex $nlist 2]
-				if {[get_attribute CORE65LPHVT/$newname cell_leakage_power] != ""} {	
+				#puts "$newname:	[get_attribute CORE65LPHVT/$newname cell_leakage_power]"
+				if {[get_attribute CORE65LPHVT/$newname cell_leakage_power] != ""} {
+					#puts "Entrato:	$newname"
+					set celle_da_cambiare($id) $celle_che_posso_cambiare($id)
+		                        set num_celle_da_cambiare [expr $num_celle_da_cambiare + 1]
+					[regexp {(.*),ref} $id void pin_name]
+	                                #get_lib_cells -of_objects $pin_name
+         	                       	set leak_L [get_attribute CORE65LPLVT/$celle_da_cambiare($id) cell_leakage_power]
+	                                #set nlist [split $celle_da_cambiare($id) "_"]
+         	                       	#set newname [lindex $nlist 0]
+                	               	#append newname "_"
+                        	        #append newname "LH"
+	                                #append newname "_"
+        	                        #append newname [lindex $nlist 2]
 					set leak_H [get_attribute CORE65LPHVT/$newname cell_leakage_power]
 					set diff [expr $leak_L - $leak_H]
 					set celle_da_cambiare($pin_name,savLeak) $diff  
 					set celle_da_cambiare($pin_name,refH) $newname
-					#puts "$celle_da_cambiare($id)"
+					#puts "$pin_name, $leak_H"
 					set celle_da_cambiare($pin_name,k) [expr $diff / [lindex $celle_che_posso_cambiare($pin_name,inc)  0]]
 				}
 			}
@@ -142,17 +155,51 @@ set void ""
 	}
 
 	parray celle_da_cambiare
+
+
+	set initial_power [compute_power]
+	set initial_slack [get_attribute [get_timing_paths  -to [all_outputs]] slack]
+
 	puts ""
 	puts "----------------------------------------------------------------------------------"
 	puts "ALGHORITM"
 
-set initial_power [compute_power]
-set initial_slack [get_attribute [get_timing_paths  -to [all_outputs]] slack]
+
+	set ll {}
+	foreach id [array names celle_da_cambiare] {
+		if {[regexp {(.*),refH} $id void pin_name]} {
+			lappend ll " $pin_name $celle_da_cambiare($pin_name,ref)  $celle_da_cambiare($pin_name,refH) $celle_da_cambiare($pin_name,k) "
+		}
+	}
+	set ll [lsort -real -index 3 $ll]
+	puts "$ll"
+
+	set num_celle_sost 0
+	foreach elem $ll {
+		size_cell [lindex $elem 0] CORE65LPHVT/[lindex $elem 2]
+		#set num_celle_sost [expr $num_celle_sost + 1]
+		set num_celle_sost [expr $num_celle_sost + 1]
+		 puts "num path in SlachWin: [sizeof_collection [get_timing_paths -to [all_outputs] -nworst $criticalPaths -slack_lesser_than $slackWin]], slack: [get_attribute [get_timing_paths  -to [all_outputs]] slack]"
+		if {[get_attribute [get_timing_paths  -to [all_outputs]] slack] < 0 || [sizeof_collection [get_timing_paths -to [all_outputs] -nworst $criticalPaths -slack_lesser_than $slackWin]] > $criticalPaths} {
+			puts "dentro"
+			size_cell [lindex $elem 0] CORE65LPLVT/[lindex $elem 1]
+			set num_celle_sost [expr $num_celle_sost - 1]
+		}
+	}
+
+
+
+
+
+
+
+set after_power [compute_power]
+set after_slack [get_attribute [get_timing_paths  -to [all_outputs]] slack]
 puts "----------------"
 puts "tot celle: $tot_cells"
 puts "number of celle che posso cambiare: $num_celle_che_posso_cambiare"
 puts "number of celle che posso NON cambiare: $num_celle_che_non_posso_cambiare"
-puts "number of celle da cambiare: [expr $num_celle_da_cambiare / 2]"
+puts "number of celle da cambiare: $num_celle_da_cambiare"
 set timefinish [clock seconds]
 #puts "num_path: $num_path"
 puts "time execution sec: [expr $timefinish - $timestart]"
@@ -162,7 +209,11 @@ puts "arrivalTime = $arrivalTime"
 puts "criticalPaths = $criticalPaths"
 puts "slackWin = $slackWin"
 puts "initial power: $initial_power"
+puts "after power: $after_power"
+puts "number of cell subst: $num_celle_sost"
+puts "POWER SAVE: [expr $after_power / $initial_power]"
 puts "initial slack: $initial_slack"
+puts "after slack: $after_slack"
 #leakage_opt -arrivalTime 1 -criticalPaths 300 -slackWin 0.1
 }
 
