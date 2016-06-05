@@ -4,7 +4,7 @@ set criticalPaths ""
 set slackWin ""
 set clockPeriod [get_attribute [get_clock] period]
 set slackWC [get_attribute [get_timing_paths  -to [all_outputs]] slack]
-set epsilon 0.50
+set epsilon 1
 set void ""
 
 	#set target_library [lappend target_library [lindex $link_library 4]]
@@ -43,28 +43,65 @@ set void ""
 		#lappend path_slack  $path_list [get_attribute $path_list slack]
 	#}
 	#puts $path_slack
+	set pin_name ""
 	set celle_che_posso_cambiare [list]
-	#set wrt_path_collection [get_timing_paths]
-	set wrt_path_collection [get_timing_path -to [all_outputs] -nworst $value -max_paths $value]
+	set wrt_path_collection [get_timing_paths -slack_greater_than $epsilon -max_paths $criticalPaths ]
+	#set wrt_path_collection [get_timing_path -to [all_outputs] -nworst $value -max_paths $value]
 	foreach_in_collection timing_point [get_attribute $wrt_path_collection points] {
-		set cell_name [get_attribute [get_attribute $timing_point object] full_name]
-		
-		#puts "----------------------------------------------"
-		#puts "$cell_name arrival: [get_attribute $timing_point arrival], load: [get_attribute [get_attribute $timing_point object] load]"
-		#puts "$cell_name [get_attribute $timing_point capacitance]"
-		#puts "$cell_name [get_attribute $timing_point delay]"
-		#puts "$cell_name [get_attribute $timing_point delta_delay]"
-		#puts "$cell_name [get_attribute $timing_point fanout]"
-		#puts "$cell_name [get_attribute $timing_point full_name]"
-		#puts "$cell_name [get_attribute $timing_point name]"
-		#puts "$cell_name [get_attribute $timing_point object]"
-		#puts "$cell_name [get_attribute $timing_point object_class]"
-		#puts "$cell_name [get_attribute $timing_point object_name]"
-		#puts "$cell_name [get_attribute $timing_point rise_fall]"
-		#puts "$cell_name [get_attribute $timing_point transition]"
+
+		set pin_name_temp [get_attribute [get_attribute $timing_point object] full_name]
+		[regexp {(U\d+).*} $pin_name_temp void pin_name]
+		set cell_name  [get_attribute $pin_name ref_name]
+		#puts $cell_name
 		lappend celle_che_posso_cambiare $cell_name 
 	}
 	
+	puts "----------------------------------------------------------------------------------"
+	puts "VELOCI----------------------------------------------------------------------------"
+	set posso_cambiare [list_unique $celle_che_posso_cambiare]
+	puts $posso_cambiare
+
+
+	set celle_che_non_posso_cambiare [list]
+
+	set wrt_path_collection [get_timing_paths -slack_lesser_than $epsilon -max_paths $criticalPaths ]
+        #set wrt_path_collection [get_timing_path -to [all_outputs] -nworst $value -max_paths $value]
+        foreach_in_collection timing_point [get_attribute $wrt_path_collection points] {
+
+                set pin_name_temp [get_attribute [get_attribute $timing_point object] full_name]
+                [regexp {(U\d+).*} $pin_name_temp void pin_name]
+                set cell_name  [get_attribute $pin_name ref_name]
+                #puts $cell_name
+                lappend celle_che_non_posso_cambiare $cell_name
+        }
+
+        puts "----------------------------------------------------------------------------------"
+	puts "LENTE-----------------------------------------------------------------------------"
+
+        set non_posso_cambiare [list_unique $celle_che_non_posso_cambiare]
+        puts $non_posso_cambiare
+
+	puts "----------------------------------------------------------------------------------"
+	puts "QUESTE SONO QUELLE REALMENTE CAMBIABILI ------------------------------------------"
+
+	set da_cambiare [lremove $posso_cambiare $non_posso_cambiare]
+	
+	puts $da_cambiare
+
+
+	puts ""
+	puts ""
+	puts "----------------------------------------------------------------------------------"
+
+
+
+	#puts $celle_che_posso_cambiare
+	
+	#set celle_che_posso_cambiare [list]
+	#foreach_in_collection real_cell  $celle_che_posso_cambiare {
+	
+
+	#} 	
 	#set celle_che_non_posso_cambiare [list]
 	#set wrt_path_collection [get_timing_paths -slack_lesser_than $epsilon -nworst 5000]
 	#foreach_in_collection timing_point [get_attribute $wrt_path_collection points] {
@@ -95,7 +132,7 @@ set void ""
 #puts $wc_slack
 
 set timefinish [clock seconds]
-puts "num_path: $num_path"
+#puts "num_path: $num_path"
 puts "time execution [expr $timefinish - $timestart]"
 puts "period: $clockPeriod"
 puts "arrivalTime = $arrivalTime"
@@ -111,3 +148,29 @@ puts "total power: $total_power"
 #set diff [expr leak_L - leak_H]
 
 #leakage_opt -arrivalTime 1 -criticalPaths 300 -slackWin 0.1
+
+
+proc list_unique {list} {
+    array set included_arr [list]
+    set unique_list [list]
+    foreach item $list {
+        if { ![info exists included_arr($item)] } {
+            set included_arr($item) ""
+            lappend unique_list $item
+        }
+    }
+    unset included_arr
+    return $unique_list
+}
+
+
+
+proc lremove {source toremove} {
+	set temp [list]
+        foreach test $source {
+        if { [lsearch $toremove $test] == -1 } {
+		lappend temp $test
+	}
+        }
+        return $temp
+}
