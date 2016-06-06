@@ -39,8 +39,8 @@ set void ""
 
 	array set celle_che_non_posso_cambiare {}
 	
-	#set wrt_path_collection [get_timing_paths -slack_greater_than $epsilon -max_paths $value -nworst $value2 ]
-	set wrt_path_collection [get_timing_paths -slack_greater_than $epsilon -max_paths $value ]
+	#set wrt_path_collection [get_timing_paths -slack_lesser_than $epsilon -max_paths $value -nworst $value2 ]
+	set wrt_path_collection [get_timing_paths -slack_lesser_than $epsilon -max_paths $value ]
 
 	set num_celle_che_non_posso_cambiare 0
 	foreach_in_collection timing_point [get_attribute $wrt_path_collection points] {
@@ -65,9 +65,9 @@ set void ""
 
 	array set celle_che_posso_cambiare {}
 
-	#set wrt_path_collection [get_timing_paths -slack_lesser_than $epsilon -max_paths $value -nworst $value2]
-	set wrt_path_collection [get_timing_paths -slack_lesser_than $epsilon -max_paths $value]
-    set starttime 0    
+	#set wrt_path_collection [get_timing_paths -slack_greater_than $epsilon -max_paths $value -nworst $value2]
+	set wrt_path_collection [get_timing_paths -slack_greater_than $epsilon -max_paths $value]
+    #set starttime 0
 	set num_celle_che_posso_cambiare 0
 	foreach_in_collection timing_point [get_attribute $wrt_path_collection points] {
  
@@ -108,12 +108,12 @@ set void ""
 		append newname "LH"
 		append newname "_"
 		append newname [lindex $nlist 2]
-		size_cell $cell_name CORE65LPHVT/$newname
+		size_cell $cell CORE65LPHVT/$newname
 	}
 	
 	#set wrt_path_collection [get_timing_paths -slack_greater_than $epsilon -max_paths $value -nworst $value2 ]	
 	set wrt_path_collection [get_timing_paths -slack_greater_than $epsilon -max_paths $value ]	
-	
+	#set starttime 0
 	foreach_in_collection timing_point [get_attribute $wrt_path_collection points] {
 
 		set pin_name_temp [get_attribute [get_attribute $timing_point object] full_name]
@@ -125,7 +125,7 @@ set void ""
 			} else {
 				set incHrtime [expr [get_attribute $timing_point arrival] - $starttime]
 				set starttime [get_attribute $timing_point arrival]
-				if {![info exists celle_che_posso_cambiare($pin_name,ref)]} {
+				if {[info exists celle_che_posso_cambiare($pin_name,ref)]} {
 					if {![info exists celle_che_posso_cambiare($pin_name,incH)]} {
 						set celle_che_posso_cambiare($pin_name,incH) [list $incHrtime]
 					} else {
@@ -145,7 +145,7 @@ set void ""
 		append newname "LL"
 		append newname "_"
 		append newname [lindex $nlist 2]
-		size_cell $cell_name CORE65LPHVT/$newname
+		size_cell $cell CORE65LPHVT/$newname
 	}	
 	
 	
