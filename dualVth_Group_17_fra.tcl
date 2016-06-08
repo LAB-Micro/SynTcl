@@ -7,6 +7,9 @@ set slackWC [get_attribute [get_timing_paths  -to [all_outputs]] slack]
 set epsilon 0.5
 set void ""
 array set celle_da_cambiare {}
+array set celle_cambiate {}
+set index 0
+set maxIndex 100
 
 	#set target_library [lappend target_library [lindex $link_library 4]]
 
@@ -41,28 +44,37 @@ array set celle_da_cambiare {}
 
 	array set celle_che_posso_cambiare {}
 	
-	for {set i 0} {$i < 10} {incr i} {
+	# numeropath quello che ci ha dato
+	# indice per evitare infinito
+	# % leak saved (OPT)
+	
+	while { $index < $maxIndex || [sizeof_collection [get_timing_paths -to [all_outputs] -nworst $criticalPaths -slack_lesser_than $slackWin]] <= $criticalPaths} {
 		set wrt_path_collection [get_timing_paths -slack_greater_than $epsilon -max_paths $value -nworst $value2 ]
 		#set wrt_path_collection [get_timing_paths -slack_greater_than $epsilon -max_paths $value ]
 
+		#dobbiamo verificare che non siano LH FATTO
+		
 		set num_celle_che_posso_cambiare 0
 		foreach_in_collection timing_point [get_attribute $wrt_path_collection points] {
 
 			set pin_name_temp [get_attribute [get_attribute $timing_point object] full_name]
 			[regexp {(U\d+).*} $pin_name_temp void pin_name]
 			set cell_name  [get_attribute $pin_name ref_name]
-			if {[regexp {U\d+.*} $pin_name_temp]} {
-				if {[regexp {\/[^Z].*} $pin_name_temp]} {
-					set starttime [get_attribute $timing_point arrival]
-				} else {
-					set incrtime [expr [get_attribute $timing_point arrival] - $starttime]
-			
-					if {![info exists celle_che_posso_cambiare($pin_name,ref)]} {
-						set celle_che_posso_cambiare($pin_name,ref) $cell_name
-						set celle_che_posso_cambiare($pin_name,incL) [list $incrtime]
-						set num_celle_che_posso_cambiare [expr $num_celle_che_posso_cambiare + 1]
+			#dobbiamo verificare che non siano LH FATTO
+			if {[regexp {LL} $cell_name]} {
+				if {[regexp {U\d+.*} $pin_name_temp]} {
+					if {[regexp {\/[^Z].*} $pin_name_temp]} {
+						set starttime [get_attribute $timing_point arrival]
 					} else {
-						set celle_che_posso_cambiare($pin_name,incL) [lsort -unique [lappend $celle_che_posso_cambiare($pin_name,incL) $incrtime]]
+						set incrtime [expr [get_attribute $timing_point arrival] - $starttime]
+			
+						if {![info exists celle_che_posso_cambiare($pin_name,ref)]} {
+							set celle_che_posso_cambiare($pin_name,ref) $cell_name
+							set celle_che_posso_cambiare($pin_name,incL) [list $incrtime]
+							set num_celle_che_posso_cambiare [expr $num_celle_che_posso_cambiare + 1]
+						} else {
+							set celle_che_posso_cambiare($pin_name,incL) [lsort -unique [lappend $celle_che_posso_cambiare($pin_name,incL) $incrtime]]
+						}
 					}
 				}
 			}
@@ -78,7 +90,9 @@ array set celle_da_cambiare {}
 
 		set wrt_path_collection [get_timing_paths -slack_lesser_than $epsilon -max_paths $value -nworst $value2]
 		#set wrt_path_collection [get_timing_paths -slack_lesser_than $epsilon -max_paths $value]
-		    
+		
+		
+		#dobbiamo verificare che non siano LH FATTO
 		set num_celle_che_non_posso_cambiare 0
 		foreach_in_collection timing_point [get_attribute $wrt_path_collection points] {
 
@@ -86,16 +100,18 @@ array set celle_da_cambiare {}
 		            [regexp {(U\d+).*} $pin_name_temp void pin_name]
 		            set cell_name  [get_attribute $pin_name ref_name]
 		            puts "celle_che_non_posso_cambiare: $pin_name"
-		            if {[regexp {U\d+.*} $pin_name_temp]} {
-		                    if {![regexp {\/[^Z].*} $pin_name_temp]} {
-	 
-		                            if {![info exists celle_che_non_posso_cambiare($pin_name,ref)]} {
-		                                    set celle_che_non_posso_cambiare($pin_name,ref) $cell_name
-						set num_celle_che_non_posso_cambiare [expr $num_celle_che_non_posso_cambiare + 1]
-		                            } 
-		                    }
-		            }
-
+		            #dobbiamo verificare che non siano LH FATTO
+		            if {[regexp {LL} $cell_name]} {
+				        if {[regexp {U\d+.*} $pin_name_temp]} {
+				                if {![regexp {\/[^Z].*} $pin_name_temp]} {
+		 
+				                        if {![info exists celle_che_non_posso_cambiare($pin_name,ref)]} {
+				                                set celle_che_non_posso_cambiare($pin_name,ref) $cell_name
+							set num_celle_che_non_posso_cambiare [expr $num_celle_che_non_posso_cambiare + 1]
+				                        } 
+				                }
+				        }
+					}
 		}
 
 		    puts "----------------------------------------------------------------------------------"
@@ -162,27 +178,32 @@ array set celle_da_cambiare {}
 	
 	
 	
-	
+		#Questo for each deve essere fatto per get_cells - cambiate
+		#fatto nel primo if
+		
+		
 		foreach_in_collection cell [get_cells] {
-			set cell_name  [get_attribute $cell ref_name]
-			if {![info exists celle_da_cambiare($cell,ref)]} {
-				set nlist [split $cell_name "_"]
-				set newname [lindex $nlist 0]
-				append newname "_"
+			if {![info exists celle_cambiate($cell)]} {
+				set cell_name  [get_attribute $cell ref_name]
+				if {![info exists celle_da_cambiare($cell,ref)]} {
+					set nlist [split $cell_name "_"]
+					set newname [lindex $nlist 0]
+					append newname "_"
 		
 		
-				if {[regexp {LHS} [lindex $nlist 1]]} {
-					append newname "LLS"
-				} else {
-					append newname "LL"
-				}
+					if {[regexp {LHS} [lindex $nlist 1]]} {
+						append newname "LLS"
+					} else {
+						append newname "LL"
+					}
 		
 		
 		
-				append newname "_"
-				append newname [lindex $nlist 2]
-				puts "$cell	[lindex $nlist 2]	$cell_name	$newname"
-				size_cell $cell CORE65LPLVT/$newname
+					append newname "_"
+					append newname [lindex $nlist 2]
+					puts "$cell	[lindex $nlist 2]	$cell_name	$newname"
+					size_cell $cell CORE65LPLVT/$newname
+					}
 				}
 		}	
 	
@@ -209,7 +230,13 @@ array set celle_da_cambiare {}
 					set nlist [split $celle_che_posso_cambiare($id) "_"]
 					set newname [lindex $nlist 0]
 					append newname "_"
-					append newname "LH"
+					
+					if {[regexp {LLS} [lindex $nlist 1]]} {
+						append newname "LHS"
+					} else {
+						append newname "LH"
+					}
+		
 					append newname "_"
 					append newname [lindex $nlist 2]
 					#puts "$newname:	[get_attribute CORE65LPHVT/$newname cell_leakage_power]"
@@ -253,21 +280,24 @@ array set celle_da_cambiare {}
 
 		set num_celle_sost 0
 		foreach elem $ll {
-			size_cell [lindex $elem 0] CORE65LPHVT/[lindex $elem 2]
+			set pin_name [lindex $elem 0]
+			size_cell $pin_name CORE65LPHVT/[lindex $elem 2]
 			#set num_celle_sost [expr $num_celle_sost + 1]
 			set num_celle_sost [expr $num_celle_sost + 1]
 			 puts "num path in SlachWin: [sizeof_collection [get_timing_paths -to [all_outputs] -nworst $criticalPaths -slack_lesser_than $slackWin]], slack: [get_attribute [get_timing_paths  -to [all_outputs]] slack]"
 			if {[get_attribute [get_timing_paths  -to [all_outputs]] slack] < 0 || [sizeof_collection [get_timing_paths -to [all_outputs] -nworst $criticalPaths -slack_lesser_than $slackWin]] > $criticalPaths} {
 				puts "dentro"
-				size_cell [lindex $elem 0] CORE65LPLVT/[lindex $elem 1]
+				size_cell $pin_name CORE65LPLVT/[lindex $elem 1]
 				set num_celle_sost [expr $num_celle_sost - 1]
+			} else {
+				#Appendo in cambiate
+				set celle_cambiate($pin_name) [lindex $elem 2]
 			}
 		}
 
 
 
-
-
+	
 
 
 	set after_power [compute_power]
@@ -277,6 +307,8 @@ array set celle_da_cambiare {}
 	puts "number of celle che posso cambiare: $num_celle_che_posso_cambiare"
 	puts "number of celle che posso NON cambiare: $num_celle_che_non_posso_cambiare"
 	puts "number of celle da cambiare: $num_celle_da_cambiare"
+	puts "number of celle cambiate finora: [array size num_celle_cambiate]"
+	#puts "number of celle cambiate finora: [array size $num_celle_cambiate]"
 	set timefinish [clock seconds]
 	#puts "num_path: $num_path"
 	puts "time execution sec: [expr $timefinish - $timestart]"
@@ -292,6 +324,10 @@ array set celle_da_cambiare {}
 	puts "initial slack: $initial_slack"
 	puts "after slack: $after_slack"
 	#leakage_opt -arrivalTime 1 -criticalPaths 300 -slackWin 0.1
+	
+	
+	
+	
 	}
 }
 
