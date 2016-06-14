@@ -27,7 +27,7 @@ set maxIndex 100
 	
 	set slackWC [expr [get_attribute [get_timing_paths  -to [all_outputs]] slack] + ($clockPeriod - $arrivalTime)]
 
-	if { $clockPeriod - $slackWC > $arrivalTime} {
+	if { $clockPeriod - $slackWC < $arrivalTime} {
 		return [list {0 0 0}]
 	}	
 	
