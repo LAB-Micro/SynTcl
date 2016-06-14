@@ -4,7 +4,7 @@ set criticalPaths ""
 set slackWin ""
 set clockPeriod [get_attribute [get_clock] period]
 
-set epsilon 0.5
+#set epsilon 0.5
 set void ""
 array set celle_da_cambiare {}
 array set celle_cambiate {}
@@ -22,28 +22,42 @@ set maxIndex 100
 	set epsilon $slackWin
 
 	if {$arrivalTime == "" || $criticalPaths == "" || $slackWin == ""} {
-		return [list {0 0 0}]
+		return [list {0 0 0 0}]
 	} 
 	
-	set slackWC [expr [get_attribute [get_timing_paths  -to [all_outputs]] slack] + ($clockPeriod - $arrivalTime)]
+	if {$arrivalTime == 0 || $slackWin == 0} {
+		return [list {0 0 0 0}]
+	} 
+	
+	#set slackWC [expr [get_attribute [get_timing_paths  -to [all_outputs]] slack] + ($clockPeriod - $arrivalTime)]
 
-	if { $clockPeriod - $slackWC > $arrivalTime} {
-		return [list {0 0 0}]
-	}	
+	set slackWC [expr [get_attribute [get_timing_paths  -to [all_outputs]] slack] + ($arrivalTime - $clockPeriod)]
+	if { $arrivalTime < $clockPeriod - $slackWC } {
+		return [list {0 0 0 0}]
+	}
+
+	
+	if {[sizeof_collection [get_timing_paths -to [all_outputs] -nworst $criticalPaths -slack_lesser_than $slackWin]] == $criticalPaths} {
+			return [list {0 0 0 0}] 
+		}	
+		
+	# if { $clockPeriod - $slackWC > $arrivalTime} {
+		# return [list {0 0 0 0}]
+	# }	
 	
 	
 	#if { $clockPeriod - $arrivalTime < $slackWC } {
-	#	return [list {0 0 0}]
+	#	return [list {0 0 0 0}]
 	#}	
 
 	
 	
-	if {$slackWC < $slackWin} {
+	# if {$slackWC < $slackWin} {
 
-		if {[sizeof_collection [get_timing_paths -to [all_outputs] -nworst $criticalPaths -slack_lesser_than $slackWin]] == $criticalPaths} {
-			return [list {0 0 0}] 
-		}	
-	}
+		# if {[sizeof_collection [get_timing_paths -to [all_outputs] -nworst $criticalPaths -slack_lesser_than $slackWin]] == $criticalPaths} {
+			# return [list {0 0 0 0}] 
+		# }	
+	# }
 	#num_path: 209504
 	set value 300000
 	set value2 30
@@ -56,8 +70,12 @@ set maxIndex 100
 	# indice per evitare infinito
 	# % leak saved (OPT)
 	
+	set initial_power [compute_power]
+	set initial_slack [expr [get_attribute [get_timing_paths  -to [all_outputs]] slack] + ($arrivalTime - $clockPeriod)]
+		
 	while { $index < $maxIndex || [sizeof_collection [get_timing_paths -to [all_outputs] -nworst $criticalPaths -slack_lesser_than $slackWin]] <= $criticalPaths} {
-		set wrt_path_collection [get_timing_paths -slack_greater_than $epsilon -max_paths $value -nworst $value2 ]
+		set wrt_path_collection [get_timing_paths -slack_greater_than $slackWin -nworst $criticalPaths ]
+		#set wrt_path_collection [get_timing_paths -slack_greater_than $epsilon -max_paths $value -nworst $value2 ]
 		#set wrt_path_collection [get_timing_paths -slack_greater_than $epsilon -max_paths $value ]
 
 		#dobbiamo verificare che non siano LH FATTO
@@ -96,7 +114,7 @@ set maxIndex 100
 
 		array set celle_che_non_posso_cambiare {}
 
-		set wrt_path_collection [get_timing_paths -slack_lesser_than $epsilon -max_paths $value -nworst $value2]
+		set wrt_path_collection [get_timing_paths -slack_lesser_than $slackWin -nworst $criticalPaths]
 		#set wrt_path_collection [get_timing_paths -slack_lesser_than $epsilon -max_paths $value]
 		
 		
@@ -115,7 +133,7 @@ set maxIndex 100
 		 
 				                        if {![info exists celle_che_non_posso_cambiare($pin_name,ref)]} {
 				                                set celle_che_non_posso_cambiare($pin_name,ref) $cell_name
-							set num_celle_che_non_posso_cambiare [expr $num_celle_che_non_posso_cambiare + 1]
+												set num_celle_che_non_posso_cambiare [expr $num_celle_che_non_posso_cambiare + 1]
 				                        } 
 				                }
 				        }
@@ -133,7 +151,7 @@ set maxIndex 100
 
 		foreach_in_collection cell [get_cells] {
 			set cell_name  [get_attribute $cell ref_name]
-			if {![info exists celle_da_cambiare($cell,ref)]} {
+			if {![info exists celle_cambiate($cell,ref)]} {
 				set nlist [split $cell_name "_"]
 				set newname [lindex $nlist 0]
 				append newname "_"
@@ -154,9 +172,9 @@ set maxIndex 100
 		puts "ho sostituito tutte in LH"
 	
 		#set wrt_path_collection [get_timing_paths -slack_greater_than $epsilon -max_paths $value -nworst $value2 ]
-		set wrt_path_collection [get_timing_paths -slack_greater_than $epsilon -max_paths $value ]
+		# set wrt_path_collection [get_timing_paths -slack_greater_than $epsilon -max_paths $value ]
+		set wrt_path_collection [get_timing_paths -slack_greater_than $slackWin -max_paths $value ]
 
-		set num_celle_che_posso_cambiare 0
 		foreach_in_collection timing_point [get_attribute $wrt_path_collection points] {
 
 			set pin_name_temp [get_attribute [get_attribute $timing_point object] full_name]
@@ -170,7 +188,6 @@ set maxIndex 100
 			
 					if {![info exists celle_che_posso_cambiare($pin_name,incH)]} {
 						set celle_che_posso_cambiare($pin_name,incH) [list $incrtime]
-						set num_celle_che_posso_cambiare [expr $num_celle_che_posso_cambiare + 1]
 					} else {
 						set celle_che_posso_cambiare($pin_name,incH) [lsort -unique [lappend $celle_che_posso_cambiare($pin_name,incH) $incrtime]]
 					}
@@ -193,20 +210,15 @@ set maxIndex 100
 		foreach_in_collection cell [get_cells] {
 			if {![info exists celle_cambiate($cell)]} {
 				set cell_name  [get_attribute $cell ref_name]
-				if {![info exists celle_da_cambiare($cell,ref)]} {
+				if {![info exists celle_cambiate($cell,ref)]} {
 					set nlist [split $cell_name "_"]
 					set newname [lindex $nlist 0]
 					append newname "_"
-		
-		
 					if {[regexp {LHS} [lindex $nlist 1]]} {
 						append newname "LLS"
 					} else {
 						append newname "LL"
 					}
-		
-		
-		
 					append newname "_"
 					append newname [lindex $nlist 2]
 					puts "$cell	[lindex $nlist 2]	$cell_name	$newname"
@@ -268,9 +280,8 @@ set maxIndex 100
 
 		parray celle_da_cambiare
 
-
-		set initial_power [compute_power]
-		set initial_slack [get_attribute [get_timing_paths  -to [all_outputs]] slack]
+		set t_initial_power [compute_power]
+		
 
 		puts ""
 		puts "----------------------------------------------------------------------------------"
@@ -286,57 +297,70 @@ set maxIndex 100
 		set ll [lsort -real -decreasing  -index 3 $ll]
 		puts "$ll"
 
-		set num_celle_sost 0
+		# set num_celle_sost 0
 		foreach elem $ll {
 			set pin_name [lindex $elem 0]
 			size_cell $pin_name CORE65LPHVT/[lindex $elem 2]
 			#set num_celle_sost [expr $num_celle_sost + 1]
-			set num_celle_sost [expr $num_celle_sost + 1]
-			 puts "num path in SlachWin: [sizeof_collection [get_timing_paths -to [all_outputs] -nworst $criticalPaths -slack_lesser_than $slackWin]], slack: [get_attribute [get_timing_paths  -to [all_outputs]] slack]"
-			if {[get_attribute [get_timing_paths  -to [all_outputs]] slack] < 0 || [sizeof_collection [get_timing_paths -to [all_outputs] -nworst $criticalPaths -slack_lesser_than $slackWin]] > $criticalPaths} {
-				puts "dentro"
+			# set num_celle_sost [expr $num_celle_sost + 1]
+			puts "num path in SlachWin: [sizeof_collection [get_timing_paths -to [all_outputs] -nworst $criticalPaths -slack_lesser_than $slackWin]], slack: [get_attribute [get_timing_paths  -to [all_outputs]] slack]"
+			set slackWC [expr [get_attribute [get_timing_paths  -to [all_outputs]] slack] + ($arrivalTime - $clockPeriod)]
+			if {slackWC < 0 || [sizeof_collection [get_timing_paths -to [all_outputs] -nworst $criticalPaths -slack_lesser_than $slackWin]] > $criticalPaths} {
+				# puts "dentro"
 				size_cell $pin_name CORE65LPLVT/[lindex $elem 1]
-				set num_celle_sost [expr $num_celle_sost - 1]
+				# set num_celle_sost [expr $num_celle_sost - 1]
 			} else {
 				#Appendo in cambiate
 				set celle_cambiate($pin_name) [lindex $elem 2]
 			}
 		}
-
-
-
 	
-
-
-	set after_power [compute_power]
-	set after_slack [get_attribute [get_timing_paths  -to [all_outputs]] slack]
-	puts "----------------"
-	puts "tot celle: $tot_cells"
-	puts "number of celle che posso cambiare: $num_celle_che_posso_cambiare"
-	puts "number of celle che posso NON cambiare: $num_celle_che_non_posso_cambiare"
-	puts "number of celle da cambiare: $num_celle_da_cambiare"
-	puts "number of celle cambiate finora: [array size num_celle_cambiate]"
-	#puts "number of celle cambiate finora: [array size $num_celle_cambiate]"
+	
+		puts "number of celle che posso cambiare: $num_celle_che_posso_cambiare"
+		puts "number of celle che posso NON cambiare: $num_celle_che_non_posso_cambiare"
+		puts "number of celle da cambiare: $num_celle_da_cambiare"
+		
+		set after_power [compute_power]
+		puts "PARTIAL POWER SAVED AT ITERATION $index:	[expr ($t_initial_power - $after_power) / $t_initial_power]"
+	}
 	set timefinish [clock seconds]
-	#puts "num_path: $num_path"
-	puts "time execution sec: [expr $timefinish - $timestart]"
-	puts "time execution min: [expr ($timefinish - $timestart) / 60]"
-	puts "period: $clockPeriod"
+	set after_power [compute_power]
+	set after_slack [expr [get_attribute [get_timing_paths  -to [all_outputs]] slack] + ($arrivalTime - $clockPeriod)]
+	set HVT_cells [array size celle_cambiate]
+	set LVT_cells [expr  $tot_cells - $HVT_cells ]
+	set HVT_perc [expr  ($HVT_cells / $tot_cells)*100 ]
+	set LVT_perc [expr  ($LVT_cells / $tot_cells)*100 ]
+	set power_saved [expr ($initial_power - $after_power) / $initial_power]
+	set duration [expr $timefinish - $timestart]
+	
+	puts "----------------"
 	puts "arrivalTime = $arrivalTime"
 	puts "criticalPaths = $criticalPaths"
 	puts "slackWin = $slackWin"
-	puts "initial power: $initial_power"
-	puts "after power: $after_power"
-	puts "number of cell subst: $num_celle_sost"
-	puts "POWER SAVE: [expr ($initial_power - $after_power) / $initial_power]"
+	
+	puts "period: $clockPeriod"
+	puts "tot celle: $tot_cells"
+	
+	puts "number of celle cambiate: [array size celle_cambiate]"
+	
+	# puts "initial power: $initial_power"
+	# puts "after power: $after_power"
+	# puts "number of cell subst: $num_celle_sost"
+	
 	puts "initial slack: $initial_slack"
 	puts "after slack: $after_slack"
 	#leakage_opt -arrivalTime 1 -criticalPaths 300 -slackWin 0.1
 	
 	
+	puts "POWER SAVE:	$power_saved"
+	puts "DURATION sec: $duration"
+	puts "DURATION min: [expr $duration / 60]"
+	puts "LVT_perc:		 $LVT_perc"
+	puts "HVT_perc:		 $HVT_perc"
 	
 	
-	}
+	
+	return {$power_saved, $duration, $LVT_perc, $HVT_perc}
 }
 
 proc compute_power {} {
