@@ -304,9 +304,33 @@ set maxIndex 100
 			#set num_celle_sost [expr $num_celle_sost + 1]
 			# set num_celle_sost [expr $num_celle_sost + 1]
 			puts "num path in SlachWin: [sizeof_collection [get_timing_paths -to [all_outputs] -nworst $criticalPaths -slack_lesser_than $slackWin]], slack: [get_attribute [get_timing_paths  -to [all_outputs]] slack]"
-			set slackWC [expr [get_attribute [get_timing_paths  -to [all_outputs]] slack] + ($arrivalTime - $clockPeriod)]
+			# set slackWC [expr [get_attribute [get_timing_paths  -to [all_outputs]] slack] + ($arrivalTime - $clockPeriod)]
+			# high performance
+			set slackWC [expr [get_attribute [get_timing_paths -through $pin_name] slack] + ($arrivalTime - $clockPeriod)]
 			if {slackWC < 0 || [sizeof_collection [get_timing_paths -to [all_outputs] -nworst $criticalPaths -slack_lesser_than $slackWin]] > $criticalPaths} {
 				# puts "dentro"
+				
+				# POSSIBILE OTTIMIZZAZIONE DA FARE:
+				# Se passando la cella da LVT A HVT lo Slack diventa < 0 o si raggiunge il num di critical Paths nella SlackWin, cerco di portare la cella (Sempre in HVT)
+				# verso "destra" del grafico aumentando il WIDTH, ossia gli riduco il delay (incrementando quindi lo Slack e facendola potenzialmente uscire dalla SlackWin)
+				# incrementando il Leackage.
+				# pseudo codice
+				# mi salvo il leakage dell'attuale cella LVT : initialLeak
+				# 	set my_list [get_lib_alternative $pin_name]: prendo tutte quelle HVT e le sorto crescentemente per dimensione
+				#	ESEMPIO IO PARTO DA IVX9 -> COMINCIO A SOSTITUIRE DA IVX12 -> IVX16 -> IV24
+				# for nuovonome $my_list {
+				# 	size_cell $pin_name CORE65LPHVT/nuovoNome
+				# 	if (initialLeak <= [get_attribute CORE65LPHVT/$nuovoNome cell_leakage_power])
+				# 		if {slackWC < 0 || [sizeof_collection [get_timing_paths -to [all_outputs] -nworst $criticalPaths -slack_lesser_than $slackWin]] > $criticalPaths}
+				#			PRENDI LA CELLA SUCCESSIVA E RIPETI 
+				#		ELSE
+				#			TROVATA!!!!!
+				# 	else 
+				#		size_cell $pin_name CORE65LPLVT/[lindex $elem 1]
+				# 		break
+				# }
+				
+				
 				size_cell $pin_name CORE65LPLVT/[lindex $elem 1]
 				# set num_celle_sost [expr $num_celle_sost - 1]
 			} else {
