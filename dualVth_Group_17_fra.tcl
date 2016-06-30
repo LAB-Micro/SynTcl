@@ -10,7 +10,8 @@ array set celle_da_cambiare {}
 array set celle_cambiate {}
 set index 0
 set maxIndex 5
-set min_percentage 0.05
+set min_percentage 0.01
+set flag_second 0
 
 	#set target_library [lappend target_library [lindex $link_library 4]]
 
@@ -19,8 +20,10 @@ set min_percentage 0.05
 	[regexp {\-arrivalTime[^\d](\d+\.*\d*) *} $args void arrivalTime] 
 	[regexp {\-criticalPaths[^\d](\d+) *} $args void criticalPaths] 
 	[regexp {\-slackWin[^\d](\d+\.*\d*) *} $args void slackWin]
+	set cp_user $criticalPaths
+	set slackWin_user $slackWin
 	
-	set epsilon $slackWin
+	set slackWin [expr $slackWin - ($arrivalTime - $clockPeriod)]
 
 	if {$arrivalTime == "" || $criticalPaths == "" || $slackWin == ""} {
 		return [list {0 0 0 0}]
@@ -59,7 +62,7 @@ set min_percentage 0.05
 	set initial_slack [expr [get_attribute [get_timing_paths  -to [all_outputs]] slack] + ($arrivalTime - $clockPeriod)]
 	set after_power [expr [compute_power] -1 ]
 		
-	while { $diff_percentage > $min_percentage && [sizeof_collection [get_timing_paths -to [all_outputs] -nworst $criticalPaths -slack_lesser_than $slackWin]] <= $criticalPaths} {
+	while { $diff_percentage > $min_percentage || $flag_second == 1} {
 		set wrt_path_collection [get_timing_paths -slack_greater_than $slackWin -nworst $criticalPaths ]
 		#set wrt_path_collection_che_posso_cambiare [get_timing_paths -slack_greater_than $slackWin -nworst $criticalPaths ]
 		#set wrt_path_collection [get_timing_paths -slack_greater_than $epsilon -max_paths $value -nworst $value2 ]
@@ -323,7 +326,7 @@ set min_percentage 0.05
 			# set slackWC [expr [get_attribute [get_timing_paths  -to [all_outputs]] slack] + ($arrivalTime - $clockPeriod)]
 			# high performance
 			set slackWC [expr [get_attribute [get_timing_paths -to [all_outputs]] slack] + ($arrivalTime - $clockPeriod)]
-			if {$slackWC < 0 || [sizeof_collection [get_timing_paths -to [all_outputs] -nworst $criticalPaths -slack_lesser_than $slackWin]] > $criticalPaths} {
+			if {$slackWC < 0 || [sizeof_collection [get_timing_paths -to [all_outputs] -nworst $cp_user -slack_lesser_than $slackWin]] >= $criticalPaths} {
 				# puts "dentro"
 				
 				# POSSIBILE OTTIMIZZAZIONE DA FARE:
@@ -360,6 +363,21 @@ set min_percentage 0.05
 		set index [expr $index +1]
 		
 		set diff_percentage [expr ($after_power - [compute_power]) / $after_power]
+
+		if { $diff_percentage <= $min_percentage} {
+			
+			if { $flag_second == 0} {
+				set flag_second 1
+				set criticalPaths [expr $criticalPaths * 2]
+			} else {
+				set flag_second 0
+			}
+
+				
+
+		} elseif { $diff_percentage > $min_percentage} {	
+			set flag_second 0
+		}
 	
 		puts "number of celle che posso cambiare: $num_celle_che_posso_cambiare"
 		puts "number of celle che posso NON cambiare: $num_celle_che_non_posso_cambiare"
@@ -375,15 +393,15 @@ set min_percentage 0.05
 	set after_slack [expr [get_attribute [get_timing_paths  -to [all_outputs]] slack] + ($arrivalTime - $clockPeriod)]
 	set HVT_cells [expr [array size celle_cambiate]]
 	set LVT_cells [expr  $tot_cells - $HVT_cells ]
-	set HVT_perc [expr  ($HVT_cells / $tot_cells)*100 ]
-	set LVT_perc [expr  ($LVT_cells / $tot_cells)*100 ]
+	set HVT_perc [expr  $HVT_cells*100 / $tot_cells ]
+	set LVT_perc [expr  $LVT_cells*100 / $tot_cells ]
 	set power_saved [expr (($initial_power - $after_power) / $initial_power) * 100]
 	set duration [expr $timefinish - $timestart]
 	
 	puts "----------------"
 	puts "arrivalTime = $arrivalTime"
-	puts "criticalPaths = $criticalPaths"
-	puts "slackWin = $slackWin"
+	puts "criticalPaths = $cp_user"
+	puts "slackWin = $slackWin_user"
 	
 	puts "period: $clockPeriod"
 	puts "tot celle: $tot_cells"
@@ -398,14 +416,14 @@ set min_percentage 0.05
 	puts "after slack: $after_slack"
 	#leakage_opt -arrivalTime 1 -criticalPaths 300 -slackWin 0.1
 	
-	
+	puts "criticalPathsReali = [sizeof_collection [get_timing_paths -to [all_outputs] -nworst $cp_user -slack_lesser_than $slackWin]]"
 	puts "POWER SAVE:	$power_saved %"
 	puts "DURATION sec: $duration"
 	puts "DURATION min: [expr $duration / 60]"
 	puts "LVT:		 	 $LVT_cells"
 	puts "HVT:		 	 $HVT_cells"
-	puts "LVT_perc:		 $LVT_perc"
-	puts "HVT_perc:		 $HVT_perc"
+	puts "LVT_perc:		 $LVT_perc %"
+	puts "HVT_perc:		 $HVT_perc %"
 	
 	
 	return {$power_saved, $duration, $LVT_perc, $HVT_perc}
@@ -420,4 +438,5 @@ proc compute_power {} {
 	return $total_power
 }
 
-leakage_opt -arrivalTime 3 -criticalPaths 300 -slackWin 0.1
+source ./scripts/synthesis.tcl
+leakage_opt -arrivalTime 3.5 -criticalPaths 300 -slackWin 0.1
