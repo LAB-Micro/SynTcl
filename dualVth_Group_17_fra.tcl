@@ -10,7 +10,7 @@ array set celle_da_cambiare {}
 array set celle_cambiate {}
 set index 0
 set maxIndex 5
-set min_percentage 0.01
+set min_percentage 0.001
 set flag_second 0
 
 	#set target_library [lappend target_library [lindex $link_library 4]]
@@ -154,7 +154,7 @@ set flag_second 0
 		
 				append newname "_"
 				append newname [lindex $nlist 2]
-				#puts "$cell	[lindex $nlist 2]	$cell_name	$newname"
+				# puts "$cell	[lindex $nlist 2]	$cell_name	$newname"
 				size_cell $cell CORE65LPHVT/$newname
 				}
 		}
@@ -322,11 +322,12 @@ set flag_second 0
 			size_cell $pin_name CORE65LPHVT/[lindex $elem 2]
 			#set num_celle_sost [expr $num_celle_sost + 1]
 			# set num_celle_sost [expr $num_celle_sost + 1]
-			puts "num path in SlackWin: [sizeof_collection [get_timing_paths -to [all_outputs] -nworst $criticalPaths -slack_lesser_than $slackWin]], slack: [get_attribute [get_timing_paths  -to [all_outputs]] slack]"
+			set slackWC [expr [get_attribute [get_timing_paths -to [all_outputs]] slack] + ($arrivalTime - $clockPeriod)]
+			puts "num path in SlackWin: [sizeof_collection [get_timing_paths -to [all_outputs] -nworst $criticalPaths -slack_lesser_than $slackWin]], slack: $slackWC"
 			# set slackWC [expr [get_attribute [get_timing_paths  -to [all_outputs]] slack] + ($arrivalTime - $clockPeriod)]
 			# high performance
-			set slackWC [expr [get_attribute [get_timing_paths -to [all_outputs]] slack] + ($arrivalTime - $clockPeriod)]
-			if {$slackWC < 0 || [sizeof_collection [get_timing_paths -to [all_outputs] -nworst $cp_user -slack_lesser_than $slackWin]] >= $criticalPaths} {
+			
+			if {$slackWC < 0 || [sizeof_collection [get_timing_paths -to [all_outputs] -nworst $cp_user -slack_lesser_than $slackWin]] >= $cp_user} {
 				# puts "dentro"
 				
 				# POSSIBILE OTTIMIZZAZIONE DA FARE:
@@ -349,7 +350,7 @@ set flag_second 0
 				# 		break
 				# }
 				
-				
+				puts "criticalPathsReali = [sizeof_collection [get_timing_paths -to [all_outputs] -nworst $cp_user -slack_lesser_than $slackWin]] [lindex $elem 2] -> [lindex $elem 1]"
 				size_cell $pin_name CORE65LPLVT/[lindex $elem 1]
 				# set num_celle_sost [expr $num_celle_sost - 1]
 			} else {
@@ -385,7 +386,8 @@ set flag_second 0
 		
 		set after_power [compute_power]
 		puts "PARTIAL POWER SAVED AT ITERATION $index:	[expr ($t_initial_power - $after_power) / $t_initial_power]"
-		puts "PARTIAL criticalPaths = $criticalPaths"
+		puts "flag_second = $flag_second"
+		puts "PARTIAL criticalPaths = [sizeof_collection [get_timing_paths -to [all_outputs] -nworst $cp_user -slack_lesser_than $slackWin]]"
 		puts "PARTIAL diff_percentage = $diff_percentage"
 	}
 	set timefinish [clock seconds]
@@ -415,8 +417,7 @@ set flag_second 0
 	puts "initial slack: $initial_slack"
 	puts "after slack: $after_slack"
 	#leakage_opt -arrivalTime 1 -criticalPaths 300 -slackWin 0.1
-	
-	puts "criticalPathsReali = [sizeof_collection [get_timing_paths -to [all_outputs] -nworst $cp_user -slack_lesser_than $slackWin]]"
+	puts "criticalPathsReali = [sizeof_collection [get_timing_paths -to [all_outputs] -nworst [expr  $cp_user + 10000 ] -slack_lesser_than $slackWin]]"
 	puts "POWER SAVE:	$power_saved %"
 	puts "DURATION sec: $duration"
 	puts "DURATION min: [expr $duration / 60]"
