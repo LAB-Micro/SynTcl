@@ -13,6 +13,17 @@ set maxIndex 5
 set min_percentage 0.001
 set flag_second 0
 
+
+	puts "[sizeof_collection [get_cells]]"
+	foreach_in_collection cell [get_cells] {
+		puts "cella: $cell, [sizeof_collection $cell]"
+			foreach_in_collection cell2 $cell {
+			puts "cellain: $cell2, [sizeof_collection $cell2]"
+			}
+		}
+		
+	puts "FINE TEST"
+
 	#set target_library [lappend target_library [lindex $link_library 4]]
 
 	set timestart [clock seconds]
@@ -51,7 +62,6 @@ set flag_second 0
 	set tot_cells [sizeof_collection [get_cells]]
 	set pin_name ""
 
-	array set celle_che_posso_cambiare {}
 	
 	# numeropath quello che ci ha dato
 	# indice per evitare infinito
@@ -67,6 +77,9 @@ set flag_second 0
 		#set wrt_path_collection_che_posso_cambiare [get_timing_paths -slack_greater_than $slackWin -nworst $criticalPaths ]
 		#set wrt_path_collection [get_timing_paths -slack_greater_than $epsilon -max_paths $value -nworst $value2 ]
 		#set wrt_path_collection [get_timing_paths -slack_greater_than $epsilon -max_paths $value ]
+		
+		
+		array set celle_che_posso_cambiare {}
 
 		#dobbiamo verificare che non siano LH FATTO
 		
@@ -140,23 +153,29 @@ set flag_second 0
 
 
 		foreach_in_collection cell [get_cells] {
+		puts "cella in LH: $cell"
 			set cell_name  [get_attribute $cell ref_name]
-			if {![info exists celle_cambiate($cell,ref)]} {
+			if {![info exists celle_cambiate($cell)]} {
 				set nlist [split $cell_name "_"]
 				set newname [lindex $nlist 0]
 				append newname "_"
 				if {[regexp {LLS} [lindex $nlist 1]]} {
 					append newname "LHS"
+					append newname "_"
+					append newname [lindex $nlist 2]
+					# puts "$cell	[lindex $nlist 2]	$cell_name	$newname"
+					size_cell $cell CORE65LPHVT/$newname
 				} elseif {[regexp {LL} [lindex $nlist 1]]} {
 					append newname "LH"
+					append newname "_"
+					append newname [lindex $nlist 2]
+					# puts "$cell	[lindex $nlist 2]	$cell_name	$newname"
+					size_cell $cell CORE65LPHVT/$newname
+				} else {
+					puts "ERRORE CELLA H"
 				}
-		
-		
-				append newname "_"
-				append newname [lindex $nlist 2]
-				# puts "$cell	[lindex $nlist 2]	$cell_name	$newname"
-				size_cell $cell CORE65LPHVT/$newname
-				}
+				
+			}
 		}
 	
 		puts "ho sostituito tutte in LH"
@@ -227,9 +246,9 @@ set flag_second 0
 		
 		
 		foreach_in_collection cell [get_cells] {
+		puts "cella in LL: $cell"
 			if {![info exists celle_cambiate($cell)]} {
 				set cell_name  [get_attribute $cell ref_name]
-				if {![info exists celle_cambiate($cell,ref)]} {
 					set nlist [split $cell_name "_"]
 					set newname [lindex $nlist 0]
 					append newname "_"
@@ -242,7 +261,7 @@ set flag_second 0
 					append newname [lindex $nlist 2]
 					puts "$cell	[lindex $nlist 2]	$cell_name	$newname"
 					size_cell $cell CORE65LPLVT/$newname
-					}
+					
 				}
 		}	
 	
@@ -255,7 +274,8 @@ set flag_second 0
 		puts "----------------------------------------------------------------------------------"
 		puts "QUESTE SONO QUELLE REALMENTE CAMBIABILI ------------------------------------------"
 
-		#array set celle_da_cambiare {}
+		array set celle_da_cambiare {}
+		
 		set num_celle_da_cambiare 0
 		foreach id [array names celle_che_posso_cambiare] {
 			if {![info exists celle_che_non_posso_cambiare($id)]} {
@@ -323,7 +343,7 @@ set flag_second 0
 			#set num_celle_sost [expr $num_celle_sost + 1]
 			# set num_celle_sost [expr $num_celle_sost + 1]
 			set slackWC [expr [get_attribute [get_timing_paths -to [all_outputs]] slack] + ($arrivalTime - $clockPeriod)]
-			puts "num path in SlackWin: [sizeof_collection [get_timing_paths -to [all_outputs] -nworst $criticalPaths -slack_lesser_than $slackWin]], slack: $slackWC"
+			puts "num path in SlackWin: [sizeof_collection [get_timing_paths -to [all_outputs] -nworst $criticalPaths -slack_lesser_than $slackWin]], slack: $slackWC, $pin_name [lindex $elem 2]"
 			# set slackWC [expr [get_attribute [get_timing_paths  -to [all_outputs]] slack] + ($arrivalTime - $clockPeriod)]
 			# high performance
 			
@@ -380,6 +400,7 @@ set flag_second 0
 			set flag_second 0
 		}
 	
+		parray celle_cambiate
 		puts "number of celle che posso cambiare: $num_celle_che_posso_cambiare"
 		puts "number of celle che posso NON cambiare: $num_celle_che_non_posso_cambiare"
 		puts "number of celle da cambiare: $num_celle_da_cambiare"
