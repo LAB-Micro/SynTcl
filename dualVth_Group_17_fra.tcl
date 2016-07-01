@@ -9,20 +9,10 @@ set void ""
 array set celle_da_cambiare {}
 array set celle_cambiate {}
 set index 0
-set maxIndex 5
-set min_percentage 0.001
+set min_percentage 0.005
 set flag_second 0
+set constantIncr 2
 
-
-	puts "[sizeof_collection [get_cells]]"
-	foreach_in_collection cell [get_cells] {
-		puts "cella: $cell, [sizeof_collection $cell]"
-			foreach_in_collection cell2 $cell {
-			puts "cellain: $cell2, [sizeof_collection $cell2]"
-			}
-		}
-		
-	puts "FINE TEST"
 
 	#set target_library [lappend target_library [lindex $link_library 4]]
 
@@ -77,7 +67,6 @@ set flag_second 0
 		#set wrt_path_collection_che_posso_cambiare [get_timing_paths -slack_greater_than $slackWin -nworst $criticalPaths ]
 		#set wrt_path_collection [get_timing_paths -slack_greater_than $epsilon -max_paths $value -nworst $value2 ]
 		#set wrt_path_collection [get_timing_paths -slack_greater_than $epsilon -max_paths $value ]
-		
 		
 		array set celle_che_posso_cambiare {}
 
@@ -153,9 +142,9 @@ set flag_second 0
 
 
 		foreach_in_collection cell [get_cells] {
-		puts "cella in LH: $cell"
+		#puts "cella in LH: $cell"
 			set cell_name  [get_attribute $cell ref_name]
-			if {![info exists celle_cambiate($cell)]} {
+			if {![info exists celle_cambiate([get_attribute $cell full_name])]} {
 				set nlist [split $cell_name "_"]
 				set newname [lindex $nlist 0]
 				append newname "_"
@@ -171,8 +160,6 @@ set flag_second 0
 					append newname [lindex $nlist 2]
 					# puts "$cell	[lindex $nlist 2]	$cell_name	$newname"
 					size_cell $cell CORE65LPHVT/$newname
-				} else {
-					puts "ERRORE CELLA H"
 				}
 				
 			}
@@ -246,8 +233,8 @@ set flag_second 0
 		
 		
 		foreach_in_collection cell [get_cells] {
-		puts "cella in LL: $cell"
-			if {![info exists celle_cambiate($cell)]} {
+		#puts "cella in LL: $cell"
+			if {![info exists celle_cambiate([get_attribute $cell full_name])]} {
 				set cell_name  [get_attribute $cell ref_name]
 					set nlist [split $cell_name "_"]
 					set newname [lindex $nlist 0]
@@ -259,7 +246,7 @@ set flag_second 0
 					}
 					append newname "_"
 					append newname [lindex $nlist 2]
-					puts "$cell	[lindex $nlist 2]	$cell_name	$newname"
+					#puts "$cell	[lindex $nlist 2]	$cell_name	$newname"
 					size_cell $cell CORE65LPLVT/$newname
 					
 				}
@@ -343,7 +330,7 @@ set flag_second 0
 			#set num_celle_sost [expr $num_celle_sost + 1]
 			# set num_celle_sost [expr $num_celle_sost + 1]
 			set slackWC [expr [get_attribute [get_timing_paths -to [all_outputs]] slack] + ($arrivalTime - $clockPeriod)]
-			puts "num path in SlackWin: [sizeof_collection [get_timing_paths -to [all_outputs] -nworst $criticalPaths -slack_lesser_than $slackWin]], slack: $slackWC, $pin_name [lindex $elem 2]"
+			puts "\nnum path in SlackWin: [sizeof_collection [get_timing_paths -to [all_outputs] -nworst $criticalPaths -slack_lesser_than $slackWin]], slack: $slackWC, $pin_name [lindex $elem 2]"
 			# set slackWC [expr [get_attribute [get_timing_paths  -to [all_outputs]] slack] + ($arrivalTime - $clockPeriod)]
 			# high performance
 			
@@ -389,7 +376,7 @@ set flag_second 0
 			
 			if { $flag_second == 0} {
 				set flag_second 1
-				set criticalPaths [expr $criticalPaths * 2]
+				set criticalPaths [expr $criticalPaths * $constantIncr]
 			} else {
 				set flag_second 0
 			}
@@ -410,6 +397,8 @@ set flag_second 0
 		puts "flag_second = $flag_second"
 		puts "PARTIAL criticalPaths = [sizeof_collection [get_timing_paths -to [all_outputs] -nworst $cp_user -slack_lesser_than $slackWin]]"
 		puts "PARTIAL diff_percentage = $diff_percentage"
+		puts "Searched Path (now) = $criticalPaths"
+		puts "# Changed Cells: [array size celle_cambiate]"
 	}
 	set timefinish [clock seconds]
 	set after_power [compute_power]
@@ -461,4 +450,4 @@ proc compute_power {} {
 }
 
 source ./scripts/synthesis.tcl
-leakage_opt -arrivalTime 3.5 -criticalPaths 300 -slackWin 0.1
+leakage_opt -arrivalTime 100 -criticalPaths 300 -slackWin 0.1
