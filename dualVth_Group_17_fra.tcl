@@ -77,7 +77,7 @@ set maxCP 5000
 		#set wrt_path_collection [get_timing_paths -slack_greater_than $epsilon -max_paths $value -nworst $value2 ]
 		#set wrt_path_collection [get_timing_paths -slack_greater_than $epsilon -max_paths $value ]
 		
-		array unset celle_che_posso_cambiare {}
+		array unset celle_che_posso_cambiare *
 		array set celle_che_posso_cambiare {}
 
 		#dobbiamo verificare che non siano LH FATTO
@@ -114,7 +114,7 @@ set maxCP 5000
 		puts ""
 	
 
-		array unset celle_che_non_posso_cambiare {}
+		array unset celle_che_non_posso_cambiare *
 		array set celle_che_non_posso_cambiare {}
 
 		set wrt_path_collection [get_timing_paths -slack_lesser_than $slackWin -nworst $criticalPaths]
@@ -272,7 +272,7 @@ set maxCP 5000
 		puts "----------------------------------------------------------------------------------"
 		puts "QUESTE SONO QUELLE REALMENTE CAMBIABILI ------------------------------------------"
 
-		array unset celle_da_cambiare {}
+		array unset celle_da_cambiare *
 		array set celle_da_cambiare {}
 		
 		set num_celle_da_cambiare 0
