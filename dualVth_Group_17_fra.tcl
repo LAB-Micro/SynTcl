@@ -6,7 +6,6 @@ set clockPeriod [get_attribute [get_clock] period]
 
 #set epsilon 0.5
 set void ""
-array set celle_da_cambiare {}
 array set celle_cambiate {}
 set index 0
 set min_percentage 0.005
@@ -73,10 +72,12 @@ set maxCP 5000
 		
 	while { $diff_percentage > $min_percentage || $flag_second == 1} {
 		set wrt_path_collection [get_timing_paths -slack_greater_than [expr $clockPeriod - $slackWin_user*$incrSlaWin] -nworst $criticalPaths ]
+		set wrt_path_collectionLH $wrt_path_collection
 		#set wrt_path_collection_che_posso_cambiare [get_timing_paths -slack_greater_than $slackWin -nworst $criticalPaths ]
 		#set wrt_path_collection [get_timing_paths -slack_greater_than $epsilon -max_paths $value -nworst $value2 ]
 		#set wrt_path_collection [get_timing_paths -slack_greater_than $epsilon -max_paths $value ]
 		
+		array unset celle_che_posso_cambiare {}
 		array set celle_che_posso_cambiare {}
 
 		#dobbiamo verificare che non siano LH FATTO
@@ -95,7 +96,7 @@ set maxCP 5000
 					} else {
 						set incrtime [expr [get_attribute $timing_point arrival] - $starttime]
 			
-						if {![info exists celle_che_posso_cambiare($pin_name,ref)]} {
+						if {![info exists celle_cambiate($pin_name)]} {
 							set celle_che_posso_cambiare($pin_name,ref) $cell_name
 							set celle_che_posso_cambiare($pin_name,incL) [list $incrtime]
 							set num_celle_che_posso_cambiare [expr $num_celle_che_posso_cambiare + 1]
@@ -113,6 +114,7 @@ set maxCP 5000
 		puts ""
 	
 
+		array unset celle_che_non_posso_cambiare {}
 		array set celle_che_non_posso_cambiare {}
 
 		set wrt_path_collection [get_timing_paths -slack_lesser_than $slackWin -nworst $criticalPaths]
@@ -180,9 +182,9 @@ set maxCP 5000
 		# set wrt_path_collection [get_timing_paths -slack_greater_than $epsilon -max_paths $value ]
 		
 		#per le celle con -slack_greater_than $slackWin
-		set wrt_path_collection [get_timing_paths -slack_greater_than [expr $clockPeriod - $slackWin_user*$incrSlaWin] -nworst $criticalPaths ]
+		# set wrt_path_collection [get_timing_paths -slack_greater_than [expr $clockPeriod - $slackWin_user*$incrSlaWin] -nworst $criticalPaths ]
 
-		foreach_in_collection timing_point [get_attribute $wrt_path_collection points] {
+		foreach_in_collection timing_point [get_attribute $wrt_path_collectionLH points] {
 
 			set pin_name_temp [get_attribute [get_attribute $timing_point object] full_name]
 			[regexp {(U\d+).*} $pin_name_temp void pin_name]
@@ -270,6 +272,7 @@ set maxCP 5000
 		puts "----------------------------------------------------------------------------------"
 		puts "QUESTE SONO QUELLE REALMENTE CAMBIABILI ------------------------------------------"
 
+		array unset celle_da_cambiare {}
 		array set celle_da_cambiare {}
 		
 		set num_celle_da_cambiare 0
