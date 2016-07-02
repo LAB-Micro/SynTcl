@@ -11,7 +11,9 @@ array set celle_cambiate {}
 set index 0
 set min_percentage 0.005
 set flag_second 0
-set constantIncr 2
+set constantIncr 5
+set incrSlaWin 1
+set maxCP 5000
 
 
 	#set target_library [lappend target_library [lindex $link_library 4]]
@@ -61,9 +63,16 @@ set constantIncr 2
 	set initial_power [compute_power]
 	set initial_slack [expr [get_attribute [get_timing_paths  -to [all_outputs]] slack] + ($arrivalTime - $clockPeriod)]
 	set after_power [expr [compute_power] -1 ]
+	
+	while { [sizeof_collection [get_timing_paths -slack_greater_than [expr $clockPeriod - $slackWin_user*$incrSlaWin] -nworst $criticalPaths ]] == 0 } {
+			set incrSlaWin [expr $incrSlaWin + 1]
+			puts "WHILE: size: [sizeof_collection [get_timing_paths -slack_greater_than [expr $clockPeriod - $slackWin_user*$incrSlaWin] -nworst $criticalPaths ]]	-slack_greater_than $clockPeriod - $slackWin_user*$incrSlaWin	[expr $clockPeriod - $slackWin_user*$incrSlaWin]"
+	}
+	
+	puts "starting from incrSlaWin = $incrSlaWin, -slack_greater_than [expr $clockPeriod - $slackWin_user*$incrSlaWin]"
 		
 	while { $diff_percentage > $min_percentage || $flag_second == 1} {
-		set wrt_path_collection [get_timing_paths -slack_greater_than $slackWin -nworst $criticalPaths ]
+		set wrt_path_collection [get_timing_paths -slack_greater_than [expr $clockPeriod - $slackWin_user*$incrSlaWin] -nworst $criticalPaths ]
 		#set wrt_path_collection_che_posso_cambiare [get_timing_paths -slack_greater_than $slackWin -nworst $criticalPaths ]
 		#set wrt_path_collection [get_timing_paths -slack_greater_than $epsilon -max_paths $value -nworst $value2 ]
 		#set wrt_path_collection [get_timing_paths -slack_greater_than $epsilon -max_paths $value ]
@@ -171,7 +180,7 @@ set constantIncr 2
 		# set wrt_path_collection [get_timing_paths -slack_greater_than $epsilon -max_paths $value ]
 		
 		#per le celle con -slack_greater_than $slackWin
-		set wrt_path_collection [get_timing_paths -slack_greater_than $slackWin -nworst $criticalPaths ]
+		set wrt_path_collection [get_timing_paths -slack_greater_than [expr $clockPeriod - $slackWin_user*$incrSlaWin] -nworst $criticalPaths ]
 
 		foreach_in_collection timing_point [get_attribute $wrt_path_collection points] {
 
@@ -196,29 +205,29 @@ set constantIncr 2
 		}
 		
 		#per le celle con -slack_lesser_than $slackWin
-		set wrt_path_collection [get_timing_paths -slack_lesser_than $slackWin -nworst $criticalPaths ]
+		# set wrt_path_collection [get_timing_paths -slack_lesser_than $slackWin -nworst $criticalPaths ]
 
-		foreach_in_collection timing_point [get_attribute $wrt_path_collection points] {
+		# foreach_in_collection timing_point [get_attribute $wrt_path_collection points] {
 
-			set pin_name_temp [get_attribute [get_attribute $timing_point object] full_name]
-			[regexp {(U\d+).*} $pin_name_temp void pin_name]
-			set cell_name  [get_attribute $pin_name ref_name]
-			if {[regexp {U\d+.*} $pin_name_temp]} {
-				if {[regexp {\/[^Z].*} $pin_name_temp]} {
-					set starttime [get_attribute $timing_point arrival]
-				} else {
-					set incrtime [expr [get_attribute $timing_point arrival] - $starttime]
+			# set pin_name_temp [get_attribute [get_attribute $timing_point object] full_name]
+			# [regexp {(U\d+).*} $pin_name_temp void pin_name]
+			# set cell_name  [get_attribute $pin_name ref_name]
+			# if {[regexp {U\d+.*} $pin_name_temp]} {
+				# if {[regexp {\/[^Z].*} $pin_name_temp]} {
+					# set starttime [get_attribute $timing_point arrival]
+				# } else {
+					# set incrtime [expr [get_attribute $timing_point arrival] - $starttime]
 			
-					if {[info exists celle_che_posso_cambiare($pin_name,ref)]} {
-						if {![info exists celle_che_posso_cambiare($pin_name,incH)]} {
-							set celle_che_posso_cambiare($pin_name,incH) [list $incrtime]
-						} else {
-							set celle_che_posso_cambiare($pin_name,incH) [lsort -unique [lappend $celle_che_posso_cambiare($pin_name,incH) $incrtime]]
-						}
-					}
-				}
-			}
-		}
+					# if {[info exists celle_che_posso_cambiare($pin_name,ref)]} {
+						# if {![info exists celle_che_posso_cambiare($pin_name,incH)]} {
+							# set celle_che_posso_cambiare($pin_name,incH) [list $incrtime]
+						# } else {
+							# set celle_che_posso_cambiare($pin_name,incH) [lsort -unique [lappend $celle_che_posso_cambiare($pin_name,incH) $incrtime]]
+						# }
+					# }
+				# }
+			# }
+		# }
 	
 	
 		puts "----------------------------------------------------------------------------------"
@@ -326,11 +335,14 @@ set constantIncr 2
 		# set num_celle_sost 0
 		foreach elem $ll {
 			set pin_name [lindex $elem 0]
+			
+			set slackWC [expr [get_attribute [get_timing_paths -to [all_outputs]] slack] + ($arrivalTime - $clockPeriod)]
+			puts "\nnum path in SlackWin: [sizeof_collection [get_timing_paths -to [all_outputs] -nworst $criticalPaths -slack_lesser_than $slackWin]], slack: $slackWC, $pin_name [get_attribute $pin_name ref_name] -> [lindex $elem 2]"
+			
 			size_cell $pin_name CORE65LPHVT/[lindex $elem 2]
 			#set num_celle_sost [expr $num_celle_sost + 1]
 			# set num_celle_sost [expr $num_celle_sost + 1]
-			set slackWC [expr [get_attribute [get_timing_paths -to [all_outputs]] slack] + ($arrivalTime - $clockPeriod)]
-			puts "\nnum path in SlackWin: [sizeof_collection [get_timing_paths -to [all_outputs] -nworst $criticalPaths -slack_lesser_than $slackWin]], slack: $slackWC, $pin_name [lindex $elem 2]"
+			
 			# set slackWC [expr [get_attribute [get_timing_paths  -to [all_outputs]] slack] + ($arrivalTime - $clockPeriod)]
 			# high performance
 			
@@ -357,7 +369,7 @@ set constantIncr 2
 				# 		break
 				# }
 				
-				puts "criticalPathsReali = [sizeof_collection [get_timing_paths -to [all_outputs] -nworst $cp_user -slack_lesser_than $slackWin]] [lindex $elem 2] -> [lindex $elem 1]"
+				puts "criticalPathsReali = [sizeof_collection [get_timing_paths -to [all_outputs] -nworst $cp_user -slack_lesser_than $slackWin]] [get_attribute $pin_name ref_name] -> [lindex $elem 1]"
 				size_cell $pin_name CORE65LPLVT/[lindex $elem 1]
 				# set num_celle_sost [expr $num_celle_sost - 1]
 			} else {
@@ -376,15 +388,30 @@ set constantIncr 2
 			
 			if { $flag_second == 0} {
 				set flag_second 1
-				set criticalPaths [expr $criticalPaths * $constantIncr]
+				if { $criticalPaths < $maxCP} { 
+					set criticalPaths [expr $criticalPaths * $constantIncr]
+				}
+				set incrSlaWin [expr $incrSlaWin + 1]
 			} else {
-				set flag_second 0
+				if {[expr $clockPeriod - $slackWin_user*$incrSlaWin] > $slackWin} {
+						set flag_second 1
+						if { $criticalPaths < $maxCP} { 
+							set criticalPaths [expr $criticalPaths * $constantIncr]
+						}
+						set incrSlaWin [expr $incrSlaWin + 1]
+					} else {
+						set flag_second 0
+					}
+				
 			}
 
 				
 
 		} elseif { $diff_percentage > $min_percentage} {	
 			set flag_second 0
+			if { $criticalPaths > $cp_user} {
+				set criticalPaths [expr $criticalPaths / $constantIncr]
+			}
 		}
 	
 		parray celle_cambiate
@@ -395,10 +422,15 @@ set constantIncr 2
 		set after_power [compute_power]
 		puts "PARTIAL POWER SAVED AT ITERATION $index:	[expr ($t_initial_power - $after_power) / $t_initial_power]"
 		puts "flag_second = $flag_second"
+		puts "incrSlaWin = $incrSlaWin"
+		puts "-slack_greater_than [expr $clockPeriod - $slackWin_user*$incrSlaWin]"
 		puts "PARTIAL criticalPaths = [sizeof_collection [get_timing_paths -to [all_outputs] -nworst $cp_user -slack_lesser_than $slackWin]]"
 		puts "PARTIAL diff_percentage = $diff_percentage"
 		puts "Searched Path (now) = $criticalPaths"
 		puts "# Changed Cells: [array size celle_cambiate]"
+		puts "# Up now sec: [expr [clock seconds] - $timestart]"
+		puts "# Up now min: [expr ([clock seconds] - $timestart) / 60]"
+		
 	}
 	set timefinish [clock seconds]
 	set after_power [compute_power]
@@ -414,7 +446,6 @@ set constantIncr 2
 	puts "arrivalTime = $arrivalTime"
 	puts "criticalPaths = $cp_user"
 	puts "slackWin = $slackWin_user"
-	
 	puts "period: $clockPeriod"
 	puts "tot celle: $tot_cells"
 	
@@ -450,4 +481,4 @@ proc compute_power {} {
 }
 
 source ./scripts/synthesis.tcl
-leakage_opt -arrivalTime 100 -criticalPaths 300 -slackWin 0.1
+leakage_opt -arrivalTime 3.5 -criticalPaths 300 -slackWin 0.1
