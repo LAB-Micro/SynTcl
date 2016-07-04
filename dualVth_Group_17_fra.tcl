@@ -69,7 +69,8 @@ set maxCP 5000
 	}
 	
 	puts "starting from incrSlaWin = $incrSlaWin, -slack_greater_than [expr $clockPeriod - $slackWin_user*$incrSlaWin]"
-		
+
+	
 	while { $diff_percentage > $min_percentage || $flag_second == 1} {
 		set wrt_path_collection [get_timing_paths -slack_greater_than [expr $clockPeriod - $slackWin_user*$incrSlaWin] -nworst $criticalPaths ]
 		set wrt_path_collectionLH $wrt_path_collection
@@ -110,7 +111,7 @@ set maxCP 5000
 	
 		puts "----------------------------------------------------------------------------------"
 		puts "VELOCI----------------------------------------------------------------------------"
-		parray celle_che_posso_cambiare
+		# parray celle_che_posso_cambiare
 		puts ""
 	
 
@@ -128,7 +129,7 @@ set maxCP 5000
 			set pin_name_temp [get_attribute [get_attribute $timing_point object] full_name]
 		            [regexp {(U\d+).*} $pin_name_temp void pin_name]
 		            set cell_name  [get_attribute $pin_name ref_name]
-		            puts "celle_che_non_posso_cambiare: $pin_name"
+		            # puts "celle_che_non_posso_cambiare: $pin_name"
 		            #dobbiamo verificare che non siano LH FATTO
 		            if {[regexp {LL} $cell_name]} {
 				        if {[regexp {U\d+.*} $pin_name_temp]} {
@@ -146,7 +147,7 @@ set maxCP 5000
 		    puts "----------------------------------------------------------------------------------"
 		puts "LENTE-----------------------------------------------------------------------------"
 
-		parray celle_che_non_posso_cambiare
+		# parray celle_che_non_posso_cambiare
 
 
 
@@ -235,7 +236,7 @@ set maxCP 5000
 		puts "----------------------------------------------------------------------------------"
 		puts "LENTE dopo che ho aggiunto incH-----------------------------------------------------------------------------"
 
-		parray celle_che_posso_cambiare
+		# parray celle_che_posso_cambiare
 	
 	
 	
@@ -316,7 +317,7 @@ set maxCP 5000
 			} 
 		}
 
-		parray celle_da_cambiare
+		# parray celle_da_cambiare
 
 		set t_initial_power [compute_power]
 		
@@ -339,38 +340,15 @@ set maxCP 5000
 		foreach elem $ll {
 			set pin_name [lindex $elem 0]
 			
+			size_cell $pin_name CORE65LPHVT/[lindex $elem 2]
+			
 			set slackWC [expr [get_attribute [get_timing_paths -to [all_outputs]] slack] + ($arrivalTime - $clockPeriod)]
 			puts "\nnum path in SlackWin: [sizeof_collection [get_timing_paths -to [all_outputs] -nworst $criticalPaths -slack_lesser_than $slackWin]], slack: $slackWC, $pin_name [get_attribute $pin_name ref_name] -> [lindex $elem 2]"
 			
-			size_cell $pin_name CORE65LPHVT/[lindex $elem 2]
-			#set num_celle_sost [expr $num_celle_sost + 1]
-			# set num_celle_sost [expr $num_celle_sost + 1]
 			
-			# set slackWC [expr [get_attribute [get_timing_paths  -to [all_outputs]] slack] + ($arrivalTime - $clockPeriod)]
-			# high performance
 			
 			if {$slackWC < 0 || [sizeof_collection [get_timing_paths -to [all_outputs] -nworst $cp_user -slack_lesser_than $slackWin]] >= $cp_user} {
-				# puts "dentro"
 				
-				# POSSIBILE OTTIMIZZAZIONE DA FARE:
-				# Se passando la cella da LVT A HVT lo Slack diventa < 0 o si raggiunge il num di critical Paths nella SlackWin, cerco di portare la cella (Sempre in HVT)
-				# verso "destra" del grafico aumentando il WIDTH, ossia gli riduco il delay (incrementando quindi lo Slack e facendola potenzialmente uscire dalla SlackWin)
-				# incrementando il Leackage.
-				# pseudo codice
-				# mi salvo il leakage dell'attuale cella LVT : initialLeak
-				# 	set my_list [get_lib_alternative $pin_name]: prendo tutte quelle HVT e le sorto crescentemente per dimensione
-				#	ESEMPIO IO PARTO DA IVX9 -> COMINCIO A SOSTITUIRE DA IVX12 -> IVX16 -> IV24
-				# for nuovonome $my_list {
-				# 	size_cell $pin_name CORE65LPHVT/nuovoNome
-				# 	if (initialLeak <= [get_attribute CORE65LPHVT/$nuovoNome cell_leakage_power])
-				# 		if {slackWC < 0 || [sizeof_collection [get_timing_paths -to [all_outputs] -nworst $criticalPaths -slack_lesser_than $slackWin]] > $criticalPaths}
-				#			PRENDI LA CELLA SUCCESSIVA E RIPETI 
-				#		ELSE
-				#			TROVATA!!!!!
-				# 	else 
-				#		size_cell $pin_name CORE65LPLVT/[lindex $elem 1]
-				# 		break
-				# }
 				
 				puts "criticalPathsReali = [sizeof_collection [get_timing_paths -to [all_outputs] -nworst $cp_user -slack_lesser_than $slackWin]] [get_attribute $pin_name ref_name] -> [lindex $elem 1]"
 				size_cell $pin_name CORE65LPLVT/[lindex $elem 1]
@@ -417,7 +395,7 @@ set maxCP 5000
 			}
 		}
 	
-		parray celle_cambiate
+		# parray celle_cambiate
 		puts "number of celle che posso cambiare: $num_celle_che_posso_cambiare"
 		puts "number of celle che posso NON cambiare: $num_celle_che_non_posso_cambiare"
 		puts "number of celle da cambiare: $num_celle_da_cambiare"
@@ -435,6 +413,84 @@ set maxCP 5000
 		puts "# Up now min: [expr ([clock seconds] - $timestart) / 60]"
 		
 	}
+	
+	
+	set timefinish [clock seconds]
+	set after_power [compute_power]
+	set after_slack [expr [get_attribute [get_timing_paths  -to [all_outputs]] slack] + ($arrivalTime - $clockPeriod)]
+	set HVT_cells [expr [array size celle_cambiate]]
+	set LVT_cells [expr  $tot_cells - $HVT_cells ]
+	set HVT_perc [expr  $HVT_cells*100 / $tot_cells ]
+	set LVT_perc [expr  $LVT_cells*100 / $tot_cells ]
+	set power_saved [expr (($initial_power - $after_power) / $initial_power) * 100]
+	set duration [expr $timefinish - $timestart]
+	
+	puts "----------------"
+	puts "arrivalTime = $arrivalTime"
+	puts "criticalPaths = $cp_user"
+	puts "slackWin = $slackWin_user"
+	puts "period: $clockPeriod"
+	puts "tot celle: $tot_cells"
+	
+	puts "number of celle cambiate: [array size celle_cambiate]"
+	
+	# puts "initial power: $initial_power"
+	# puts "after power: $after_power"
+	# puts "number of cell subst: $num_celle_sost"
+	
+	puts "initial slack: $initial_slack"
+	puts "after slack: $after_slack"
+	#leakage_opt -arrivalTime 1 -criticalPaths 300 -slackWin 0.1
+	puts "criticalPathsReali = [sizeof_collection [get_timing_paths -to [all_outputs] -nworst [expr  $cp_user + 10000 ] -slack_lesser_than $slackWin]]"
+	puts "POWER SAVE:	$power_saved %"
+	
+	
+	
+	puts ""
+	puts "----------------------------------------------------------------------------------"
+	puts "ALGHORITM 2 "
+	#WORK ONLY IF WRITE IN THE ./tech/STcmos65/synopsys_dc.setup 
+	#set target_library [lappend target_library [lindex $link_library 4]]
+	
+	set num_of_cell_sub 0
+	# decreasing the WIDTH reduce le leackage, increare le delay
+	foreach id [array names celle_cambiate] {
+		# puts "id: $id"
+		set ff 0
+		set init_cell [get_attribute $id ref_name]
+		[regexp {X(\d*)$} $init_cell void xload]
+		# puts "init_cell: $init_cell,	xload: $xload"
+		foreach_in_collection cell [get_alternative_lib_cells $id] {
+				set cell [get_attribute $cell full_name]
+				# puts "	cell: $cell"
+				if {[regexp {LH} $cell]} {
+					[regexp {.*\/(.*)} $cell void ref]
+					[regexp {X(\d*)} $ref void xloadnew]
+					# puts "		ref: $ref,	xloadnew < xload: $xloadnew < $xload"
+					if {$xloadnew < $xload} {
+						size_cell $id $cell
+						set slackWC [expr [get_attribute [get_timing_paths -to [all_outputs]] slack] + ($arrivalTime - $clockPeriod)]
+						# puts "		$id -> $cell"
+						if {$slackWC < 0 || [sizeof_collection [get_timing_paths -to [all_outputs] -nworst $cp_user -slack_lesser_than $slackWin]] >= $cp_user} {
+							# puts "		Torno indietro $id -> $init_cell"
+							size_cell $id $init_cell
+					} else {
+						set init_cell $cell
+						set xload $xloadnew
+							if {$ff == 0} {
+								set ff 1
+								set num_of_cell_sub [expr $num_of_cell_sub + 1]
+							}
+						puts "		found: new init_cell: $init_cell, new xloadnew: $xloadnew"
+						}
+					}
+				}
+			}
+	}	
+	
+	puts "number of celle cambiate in ALGO2: $num_of_cell_sub"
+	
+	
 	set timefinish [clock seconds]
 	set after_power [compute_power]
 	set after_slack [expr [get_attribute [get_timing_paths  -to [all_outputs]] slack] + ($arrivalTime - $clockPeriod)]
@@ -471,7 +527,7 @@ set maxCP 5000
 	puts "HVT_perc:		 $HVT_perc %"
 	
 	
-	return {$power_saved, $duration, $LVT_perc, $HVT_perc}
+	return [list {$power_saved $duration $LVT_perc $HVT_perc}]
 }
 
 proc compute_power {} {
