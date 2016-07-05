@@ -61,17 +61,23 @@ set maxCP 5000
 	set diff_percentage 10
 	set initial_power [compute_power]
 	set initial_slack [expr [get_attribute [get_timing_paths  -to [all_outputs]] slack] + ($arrivalTime - $clockPeriod)]
-	set after_power [expr [compute_power] -1 ]
+	set after_power [expr [compute_power] ]
 	
+	
+	
+	
+	
+	# puts "starting from incrSlaWin = $incrSlaWin, -slack_greater_than [expr $clockPeriod - $slackWin_user*$incrSlaWin]"
+	set a 0
+	while { $a < 5} {
+	
+	set incrSlaWin 1
 	while { [sizeof_collection [get_timing_paths -slack_greater_than [expr $clockPeriod - $slackWin_user*$incrSlaWin] -nworst $criticalPaths ]] == 0 } {
 			set incrSlaWin [expr $incrSlaWin + 1]
 			# puts "WHILE: size: [sizeof_collection [get_timing_paths -slack_greater_than [expr $clockPeriod - $slackWin_user*$incrSlaWin] -nworst $criticalPaths ]]	-slack_greater_than $clockPeriod - $slackWin_user*$incrSlaWin	[expr $clockPeriod - $slackWin_user*$incrSlaWin]"
 	}
 	
-	# puts "starting from incrSlaWin = $incrSlaWin, -slack_greater_than [expr $clockPeriod - $slackWin_user*$incrSlaWin]"
-
-	
-	while { $diff_percentage > $min_percentage || $flag_second == 1} {
+	while { [expr $clockPeriod - $slackWin_user*$incrSlaWin] > $slackWin } {
 		set wrt_path_collection [get_timing_paths -slack_greater_than [expr $clockPeriod - $slackWin_user*$incrSlaWin] -nworst $criticalPaths ]
 		set wrt_path_collectionLH $wrt_path_collection
 		#set wrt_path_collection_che_posso_cambiare [get_timing_paths -slack_greater_than $slackWin -nworst $criticalPaths ]
@@ -362,38 +368,11 @@ set maxCP 5000
 		}
 		
 		set index [expr $index +1]
+		set incrSlaWin [expr $incrSlaWin + 1]
 		
 		set diff_percentage [expr ($after_power - [compute_power]) / $after_power]
 
-		if { $diff_percentage <= $min_percentage} {
-			
-			if { $flag_second == 0} {
-				set flag_second 1
-				if { $criticalPaths < $maxCP} { 
-					set criticalPaths [expr $criticalPaths * $constantIncr]
-				}
-				set incrSlaWin [expr $incrSlaWin + 1]
-			} else {
-				if {[expr $clockPeriod - $slackWin_user*$incrSlaWin] > $slackWin} {
-						set flag_second 1
-						if { $criticalPaths < $maxCP} { 
-							set criticalPaths [expr $criticalPaths * $constantIncr]
-						}
-						set incrSlaWin [expr $incrSlaWin + 1]
-					} else {
-						set flag_second 0
-					}
-				
-			}
-
-				
-
-		} elseif { $diff_percentage > $min_percentage} {	
-			set flag_second 0
-			if { $criticalPaths > $cp_user} {
-				set criticalPaths [expr $criticalPaths / $constantIncr]
-			}
-		}
+		
 	
 		# parray celle_cambiate
 		puts "number of celle che posso cambiare: $num_celle_che_posso_cambiare"
@@ -414,18 +393,10 @@ set maxCP 5000
 		puts ""
 		
 	}
+	set a [expr $a + 1]
+	}
 	
-	
-	set timefinish [clock seconds]
-	set after_power [compute_power]
-	set after_slack [expr [get_attribute [get_timing_paths  -to [all_outputs]] slack] + ($arrivalTime - $clockPeriod)]
-	set HVT_cells [expr [array size celle_cambiate]]
-	set LVT_cells [expr  $tot_cells - $HVT_cells ]
-	set HVT_perc [expr  $HVT_cells*100 / $tot_cells ]
-	set LVT_perc [expr  $LVT_cells*100 / $tot_cells ]
-	set power_saved [expr (($initial_power - $after_power) / $initial_power) * 100]
-	set duration [expr $timefinish - $timestart]
-	
+
 	
 	
 	# puts ""
