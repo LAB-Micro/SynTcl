@@ -65,10 +65,10 @@ set maxCP 5000
 	
 	while { [sizeof_collection [get_timing_paths -slack_greater_than [expr $clockPeriod - $slackWin_user*$incrSlaWin] -nworst $criticalPaths ]] == 0 } {
 			set incrSlaWin [expr $incrSlaWin + 1]
-			puts "WHILE: size: [sizeof_collection [get_timing_paths -slack_greater_than [expr $clockPeriod - $slackWin_user*$incrSlaWin] -nworst $criticalPaths ]]	-slack_greater_than $clockPeriod - $slackWin_user*$incrSlaWin	[expr $clockPeriod - $slackWin_user*$incrSlaWin]"
+			# puts "WHILE: size: [sizeof_collection [get_timing_paths -slack_greater_than [expr $clockPeriod - $slackWin_user*$incrSlaWin] -nworst $criticalPaths ]]	-slack_greater_than $clockPeriod - $slackWin_user*$incrSlaWin	[expr $clockPeriod - $slackWin_user*$incrSlaWin]"
 	}
 	
-	puts "starting from incrSlaWin = $incrSlaWin, -slack_greater_than [expr $clockPeriod - $slackWin_user*$incrSlaWin]"
+	# puts "starting from incrSlaWin = $incrSlaWin, -slack_greater_than [expr $clockPeriod - $slackWin_user*$incrSlaWin]"
 
 	
 	while { $diff_percentage > $min_percentage || $flag_second == 1} {
@@ -109,10 +109,10 @@ set maxCP 5000
 			}
 		}
 	
-		puts "----------------------------------------------------------------------------------"
-		puts "VELOCI----------------------------------------------------------------------------"
+		# puts "----------------------------------------------------------------------------------"
+		# puts "VELOCI----------------------------------------------------------------------------"
 		# parray celle_che_posso_cambiare
-		puts ""
+		# puts ""
 	
 
 		array unset celle_che_non_posso_cambiare *
@@ -144,8 +144,8 @@ set maxCP 5000
 					}
 		}
 
-		    puts "----------------------------------------------------------------------------------"
-		puts "LENTE-----------------------------------------------------------------------------"
+		    # puts "----------------------------------------------------------------------------------"
+		# puts "LENTE-----------------------------------------------------------------------------"
 
 		# parray celle_che_non_posso_cambiare
 
@@ -177,7 +177,7 @@ set maxCP 5000
 			}
 		}
 	
-		puts "ho sostituito tutte in LH"
+		# puts "ho sostituito tutte in LH"
 	
 		#set wrt_path_collection_che_posso_cambiare [get_timing_paths -slack_greater_than $epsilon -max_paths $value -nworst $value2 ]
 		# set wrt_path_collection [get_timing_paths -slack_greater_than $epsilon -max_paths $value ]
@@ -233,8 +233,8 @@ set maxCP 5000
 		# }
 	
 	
-		puts "----------------------------------------------------------------------------------"
-		puts "LENTE dopo che ho aggiunto incH-----------------------------------------------------------------------------"
+		# puts "----------------------------------------------------------------------------------"
+		# puts "LENTE dopo che ho aggiunto incH-----------------------------------------------------------------------------"
 
 		# parray celle_che_posso_cambiare
 	
@@ -264,14 +264,14 @@ set maxCP 5000
 				}
 		}	
 	
-		puts "ho risostituito tutte in LL"
+		# puts "ho risostituito tutte in LL"
 
 
 
 
-		puts ""
-		puts "----------------------------------------------------------------------------------"
-		puts "QUESTE SONO QUELLE REALMENTE CAMBIABILI ------------------------------------------"
+		# puts ""
+		# puts "----------------------------------------------------------------------------------"
+		# puts "QUESTE SONO QUELLE REALMENTE CAMBIABILI ------------------------------------------"
 
 		array unset celle_da_cambiare *
 		array set celle_da_cambiare {}
@@ -322,9 +322,9 @@ set maxCP 5000
 		set t_initial_power [compute_power]
 		
 
-		puts ""
-		puts "----------------------------------------------------------------------------------"
-		puts "ALGHORITM"
+		# puts ""
+		# puts "----------------------------------------------------------------------------------"
+		# puts "ALGHORITM"
 
 
 		set ll {}
@@ -334,7 +334,7 @@ set maxCP 5000
 			}
 		}
 		set ll [lsort -real -decreasing  -index 3 $ll]
-		puts "$ll"
+		# puts "$ll"
 
 		# set num_celle_sost 0
 		foreach elem $ll {
@@ -343,14 +343,14 @@ set maxCP 5000
 			size_cell $pin_name CORE65LPHVT/[lindex $elem 2]
 			
 			set slackWC [expr [get_attribute [get_timing_paths -to [all_outputs]] slack] + ($arrivalTime - $clockPeriod)]
-			puts "\nnum path in SlackWin: [sizeof_collection [get_timing_paths -to [all_outputs] -nworst $criticalPaths -slack_lesser_than $slackWin]], slack: $slackWC, $pin_name [get_attribute $pin_name ref_name] -> [lindex $elem 2]"
+			# puts "\nnum path in SlackWin: [sizeof_collection [get_timing_paths -to [all_outputs] -nworst $criticalPaths -slack_lesser_than $slackWin]], slack: $slackWC, $pin_name [get_attribute $pin_name ref_name] -> [lindex $elem 2]"
 			
 			
 			
 			if {$slackWC < 0 || [sizeof_collection [get_timing_paths -to [all_outputs] -nworst $cp_user -slack_lesser_than $slackWin]] >= $cp_user} {
 				
 				
-				puts "criticalPathsReali = [sizeof_collection [get_timing_paths -to [all_outputs] -nworst $cp_user -slack_lesser_than $slackWin]] [get_attribute $pin_name ref_name] -> [lindex $elem 1]"
+				# puts "criticalPathsReali = [sizeof_collection [get_timing_paths -to [all_outputs] -nworst $cp_user -slack_lesser_than $slackWin]] [get_attribute $pin_name ref_name] -> [lindex $elem 1]"
 				size_cell $pin_name CORE65LPLVT/[lindex $elem 1]
 				# set num_celle_sost [expr $num_celle_sost - 1]
 			} else {
@@ -411,6 +411,7 @@ set maxCP 5000
 		puts "# Changed Cells: [array size celle_cambiate]"
 		puts "# Up now sec: [expr [clock seconds] - $timestart]"
 		puts "# Up now min: [expr ([clock seconds] - $timestart) / 60]"
+		puts ""
 		
 	}
 	
@@ -425,30 +426,11 @@ set maxCP 5000
 	set power_saved [expr (($initial_power - $after_power) / $initial_power) * 100]
 	set duration [expr $timefinish - $timestart]
 	
-	puts "----------------"
-	puts "arrivalTime = $arrivalTime"
-	puts "criticalPaths = $cp_user"
-	puts "slackWin = $slackWin_user"
-	puts "period: $clockPeriod"
-	puts "tot celle: $tot_cells"
-	
-	puts "number of celle cambiate: [array size celle_cambiate]"
-	
-	# puts "initial power: $initial_power"
-	# puts "after power: $after_power"
-	# puts "number of cell subst: $num_celle_sost"
-	
-	puts "initial slack: $initial_slack"
-	puts "after slack: $after_slack"
-	#leakage_opt -arrivalTime 1 -criticalPaths 300 -slackWin 0.1
-	puts "criticalPathsReali = [sizeof_collection [get_timing_paths -to [all_outputs] -nworst [expr  $cp_user + 10000 ] -slack_lesser_than $slackWin]]"
-	puts "POWER SAVE:	$power_saved %"
 	
 	
-	
-	puts ""
-	puts "----------------------------------------------------------------------------------"
-	puts "ALGHORITM 2 "
+	# puts ""
+	# puts "----------------------------------------------------------------------------------"
+	# puts "ALGHORITM 2 "
 	#WORK ONLY IF WRITE IN THE ./tech/STcmos65/synopsys_dc.setup 
 	#set target_library [lappend target_library [lindex $link_library 4]]
 	
@@ -465,7 +447,7 @@ set maxCP 5000
 				# puts "	cell: $cell"
 				if {[regexp {LH} $cell]} {
 					[regexp {.*\/(.*)} $cell void ref]
-					[regexp {X(\d*)} $ref void xloadnew]
+					[regexp {X(\d*)$} $ref void xloadnew]
 					# puts "		ref: $ref,	xloadnew < xload: $xloadnew < $xload"
 					if {$xloadnew < $xload} {
 						size_cell $id $cell
@@ -481,7 +463,7 @@ set maxCP 5000
 								set ff 1
 								set num_of_cell_sub [expr $num_of_cell_sub + 1]
 							}
-						puts "		found: new init_cell: $init_cell, new xloadnew: $xloadnew"
+						# puts "		found: new init_cell: $init_cell, new xloadnew: $xloadnew"
 						}
 					}
 				}
@@ -510,13 +492,8 @@ set maxCP 5000
 	
 	puts "number of celle cambiate: [array size celle_cambiate]"
 	
-	# puts "initial power: $initial_power"
-	# puts "after power: $after_power"
-	# puts "number of cell subst: $num_celle_sost"
-	
 	puts "initial slack: $initial_slack"
 	puts "after slack: $after_slack"
-	#leakage_opt -arrivalTime 1 -criticalPaths 300 -slackWin 0.1
 	puts "criticalPathsReali = [sizeof_collection [get_timing_paths -to [all_outputs] -nworst [expr  $cp_user + 10000 ] -slack_lesser_than $slackWin]]"
 	puts "POWER SAVE:	$power_saved %"
 	puts "DURATION sec: $duration"
