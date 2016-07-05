@@ -68,8 +68,7 @@ set maxCP 5000
 	
 	
 	# puts "starting from incrSlaWin = $incrSlaWin, -slack_greater_than [expr $clockPeriod - $slackWin_user*$incrSlaWin]"
-	set a 0
-	while { $a < 5} {
+
 	
 	set incrSlaWin 1
 	while { [sizeof_collection [get_timing_paths -slack_greater_than [expr $clockPeriod - $slackWin_user*$incrSlaWin] -nworst $criticalPaths ]] == 0 } {
@@ -393,8 +392,7 @@ set maxCP 5000
 		puts ""
 		
 	}
-	set a [expr $a + 1]
-	}
+
 	
 
 	
