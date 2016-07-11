@@ -78,7 +78,7 @@ set maxCP 5000
 	
 	while { [expr $clockPeriod - $slackWin_user*$incrSlaWin] > $slackWin } {
 		set wrt_path_collection [get_timing_paths -slack_greater_than [expr $clockPeriod - $slackWin_user*$incrSlaWin] -nworst $criticalPaths ]
-		set wrt_path_collectionLH $wrt_path_collection
+		set LH_list $wrt_path_collection
 		#set wrt_path_collection_che_posso_cambiare [get_timing_paths -slack_greater_than $slackWin -nworst $criticalPaths ]
 		#set wrt_path_collection [get_timing_paths -slack_greater_than $epsilon -max_paths $value -nworst $value2 ]
 		#set wrt_path_collection [get_timing_paths -slack_greater_than $epsilon -max_paths $value ]
@@ -188,10 +188,10 @@ set maxCP 5000
 		# set wrt_path_collection [get_timing_paths -slack_greater_than $epsilon -max_paths $value ]
 		
 		#per le celle con -slack_greater_than $slackWin
-		# set wrt_path_collection [get_timing_paths -slack_greater_than [expr $clockPeriod - $slackWin_user*$incrSlaWin] -nworst $criticalPaths ]
-
-		foreach_in_collection timing_point [get_attribute $wrt_path_collectionLH points] {
-
+		#set wrt_path_collection [get_timing_paths -slack_greater_than [expr $clockPeriod - $slackWin_user*$incrSlaWin] -nworst $criticalPaths ]
+		#puts "prima"
+		foreach_in_collection timing_point [get_attribute $LH_list points] {
+		#puts "dentro"
 			set pin_name_temp [get_attribute [get_attribute $timing_point object] full_name]
 			[regexp {(U\d+).*} $pin_name_temp void pin_name]
 			set cell_name  [get_attribute $pin_name ref_name]
@@ -211,31 +211,7 @@ set maxCP 5000
 				}
 			}
 		}
-		
-		#per le celle con -slack_lesser_than $slackWin
-		# set wrt_path_collection [get_timing_paths -slack_lesser_than $slackWin -nworst $criticalPaths ]
-
-		# foreach_in_collection timing_point [get_attribute $wrt_path_collection points] {
-
-			# set pin_name_temp [get_attribute [get_attribute $timing_point object] full_name]
-			# [regexp {(U\d+).*} $pin_name_temp void pin_name]
-			# set cell_name  [get_attribute $pin_name ref_name]
-			# if {[regexp {U\d+.*} $pin_name_temp]} {
-				# if {[regexp {\/[^Z].*} $pin_name_temp]} {
-					# set starttime [get_attribute $timing_point arrival]
-				# } else {
-					# set incrtime [expr [get_attribute $timing_point arrival] - $starttime]
-			
-					# if {[info exists celle_che_posso_cambiare($pin_name,ref)]} {
-						# if {![info exists celle_che_posso_cambiare($pin_name,incH)]} {
-							# set celle_che_posso_cambiare($pin_name,incH) [list $incrtime]
-						# } else {
-							# set celle_che_posso_cambiare($pin_name,incH) [lsort -unique [lappend $celle_che_posso_cambiare($pin_name,incH) $incrtime]]
-						# }
-					# }
-				# }
-			# }
-		# }
+		#puts "dopo"
 	
 	
 		# puts "----------------------------------------------------------------------------------"
@@ -449,7 +425,10 @@ set maxCP 5000
 	set LVT_cells [expr  $tot_cells - $HVT_cells ]
 	set HVT_perc [expr  $HVT_cells*100 / $tot_cells ]
 	set LVT_perc [expr  $LVT_cells*100 / $tot_cells ]
+	set HVT_perc2 [expr  $HVT_cells / $tot_cells ]
+	set LVT_perc2 [expr  $LVT_cells / $tot_cells ]
 	set power_saved [expr (($initial_power - $after_power) / $initial_power) * 100]
+	set power_saved2 [expr (($initial_power - $after_power) / $initial_power)]
 	set duration [expr $timefinish - $timestart]
 	
 	puts "----------------"
@@ -472,9 +451,10 @@ set maxCP 5000
 	puts "LVT_perc:		 $LVT_perc %"
 	puts "HVT_perc:		 $HVT_perc %"
 	
-	
-	return [list {$power_saved $duration $LVT_perc $HVT_perc}]
-}
+	set list_to_return [list $power_saved2 $duration $LVT_perc2 $HVT_perc2] 
+	return $list_to_return
+
+	}
 
 proc compute_power {} {
 	set total_power 0
@@ -485,5 +465,5 @@ proc compute_power {} {
 	return $total_power
 }
 
-source ./scripts/synthesis.tcl
+#source ./scripts/synthesis.tcl
 leakage_opt -arrivalTime 3.5 -criticalPaths 300 -slackWin 0.1
